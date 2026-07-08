@@ -1,0 +1,39 @@
+import enum
+from datetime import datetime
+
+from sqlalchemy import String, Boolean, DateTime, Enum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
+
+
+class UserRole(str, enum.Enum):
+    ADMIN = "ADMIN"
+    BAILLEUR = "BAILLEUR"
+    LOCATAIRE = "LOCATAIRE"
+    GESTIONNAIRE = "GESTIONNAIRE"
+
+
+class PlanType(str, enum.Enum):
+    FREEMIUM = "FREEMIUM"
+    PREMIUM = "PREMIUM"
+    AGENCE = "AGENCE"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False, default=UserRole.BAILLEUR)
+    plan: Mapped[PlanType] = mapped_column(Enum(PlanType), nullable=False, default=PlanType.FREEMIUM)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    immeubles = relationship("Immeuble", back_populates="bailleur", cascade="all, delete-orphan")
+    locataire_profile = relationship(
+        "Locataire", back_populates="utilisateur", uselist=False, foreign_keys="Locataire.utilisateur_id"
+    )
