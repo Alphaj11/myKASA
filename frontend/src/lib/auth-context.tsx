@@ -13,12 +13,19 @@ interface RegisterPayload {
   role: UserRole;
 }
 
+export function homeForRole(role: UserRole): string {
+  if (role === "ADMIN") return "/admin";
+  if (role === "LOCATAIRE") return "/locataire";
+  return "/dashboard";
+}
+
 interface AuthContextValue {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -75,11 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function redirectAfterLogin(role: UserRole) {
-    if (role === "ADMIN") {
-      router.push("/admin");
-    } else {
-      router.push("/dashboard");
-    }
+    router.push(homeForRole(role));
   }
 
   function logout() {
@@ -89,8 +92,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.push("/login");
   }
 
+  async function refreshUser() {
+    const res = await api.get<User>("/api/auth/me");
+    setUser(res.data);
+  }
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

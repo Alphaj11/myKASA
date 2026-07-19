@@ -1,12 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+import os
+
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user, require_roles
 from app.db.session import get_db
+from app.models.contrat import Contrat
 from app.models.locataire import Locataire
 from app.models.logement import Logement, StatutLogement
 from app.models.user import User, UserRole
 from app.schemas.locataire import LocataireCreate, LocataireRead, LocataireUpdate
+from app.services.documents import STORAGE_ROOT, save_locataire_document
 
 router = APIRouter(prefix="/api/locataires", tags=["locataires"])
 
@@ -72,5 +77,44 @@ def delete_locataire(
     locataire_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
     locataire = _get_owned_locataire(db, locataire_id, current_user)
+    has_contrats = db.query(Contrat).filter(Contrat.locataire_id == locataire_id).first() is not None
+    if has_contrats:
+        raise HTTPException(
+            status_code=409,
+            detail="Impossible de supprimer un locataire ayant des contrats associés.",
+        )
     db.delete(locataire)
     db.commit()
+
+
+@router.post("/{locataire_id}/document", response_model=LocataireRead)
+async def upload_locataire_document(
+    locataire_id: int,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    locataire = _get_owned_locataire(db, locataire_id, current_user)
+    content = await file.read()
+    new_path = save_locataire_document(locataire_id, file, content)
+
+    if locataire.piece_identite:
+        old_path = os.path.join(STORAGE_ROOT, locataire.piece_identite)
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    locataire.piece_identite = new_path
+    db.commit()
+    db.refresh(locataire)
+    return locataire
+
+
+@router.get("/{locataire_id}/document")
+def download_locataire_document(
+    locataire_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
+    locataire = _get_owned_locataire(db, locataire_id, current_user)
+    if not locataire.piece_identite:
+        raise HTTPException(status_code=404, detail="Aucun document associé")
+    full_path = os.path.join(STORAGE_ROOT, locataire.piece_identite)
+    return FileResponse(full_path)

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Wallet, Download, Loader2 } from "lucide-react";
+import { Plus, Wallet, Download, Loader2, AlertTriangle, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -52,6 +52,7 @@ export default function PaiementsPage() {
   const [locataires, setLocataires] = useState<Locataire[]>([]);
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({
     contrat_id: "",
     montant: "",
@@ -107,6 +108,12 @@ export default function PaiementsPage() {
       setIsSubmitting(false);
     }
   }
+
+  const filteredPaiements = paiements?.filter((p) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return contratLabel(p.contrat_id).toLowerCase().includes(q) || p.periode.includes(q);
+  });
 
   async function downloadQuittance(quittanceId: number) {
     try {
@@ -208,6 +215,24 @@ export default function PaiementsPage() {
         </Dialog>
       </div>
 
+      {contrats.some((c) => c.en_retard) && (
+        <Card className="border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            Loyers en retard ce mois
+          </div>
+          <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+            {contrats
+              .filter((c) => c.en_retard)
+              .map((c) => (
+                <li key={c.id}>
+                  {contratLabel(c.id)} — {new Intl.NumberFormat("fr-FR").format(c.loyer_mensuel)} FCFA
+                </li>
+              ))}
+          </ul>
+        </Card>
+      )}
+
       {paiements === null ? (
         <Skeleton className="h-64 rounded-xl" />
       ) : paiements.length === 0 ? (
@@ -216,6 +241,16 @@ export default function PaiementsPage() {
           Aucun paiement enregistré pour l&apos;instant.
         </Card>
       ) : (
+        <>
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher un locataire ou une période..."
+            className="pl-9"
+          />
+        </div>
         <Card className="overflow-hidden p-0">
           <Table>
             <TableHeader>
@@ -229,7 +264,7 @@ export default function PaiementsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paiements.map((paiement) => (
+              {filteredPaiements?.map((paiement) => (
                 <TableRow key={paiement.id}>
                   <TableCell className="font-medium">{contratLabel(paiement.contrat_id)}</TableCell>
                   <TableCell>{paiement.periode}</TableCell>
@@ -255,6 +290,7 @@ export default function PaiementsPage() {
             </TableBody>
           </Table>
         </Card>
+        </>
       )}
     </div>
   );

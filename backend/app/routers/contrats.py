@@ -12,6 +12,7 @@ from app.models.logement import Logement, StatutLogement
 from app.models.user import User, UserRole
 from app.schemas.contrat import ContratCreate, ContratRead, ContratUpdate
 from app.services.pdf import STORAGE_ROOT, generate_contrat_pdf
+from app.services.stats import est_en_retard
 
 router = APIRouter(prefix="/api/contrats", tags=["contrats"])
 
@@ -21,7 +22,10 @@ def list_contrats(db: Session = Depends(get_db), current_user: User = Depends(ge
     query = db.query(Contrat)
     if current_user.role != UserRole.ADMIN:
         query = query.filter(Contrat.bailleur_id == current_user.id)
-    return query.order_by(Contrat.created_at.desc()).all()
+    contrats = query.order_by(Contrat.created_at.desc()).all()
+    for contrat in contrats:
+        contrat.en_retard = est_en_retard(db, contrat)
+    return contrats
 
 
 @router.post("", response_model=ContratRead, status_code=201)
@@ -47,6 +51,7 @@ def create_contrat(
     contrat.pdf_path = generate_contrat_pdf(contrat, logement, locataire, current_user)
     db.commit()
     db.refresh(contrat)
+    contrat.en_retard = est_en_retard(db, contrat)
     return contrat
 
 
@@ -59,9 +64,25 @@ def _get_owned_contrat(db: Session, contrat_id: int, current_user: User) -> Cont
     return contrat
 
 
+def _get_viewable_contrat(db: Session, contrat_id: int, current_user: User) -> Contrat:
+    """Comme _get_owned_contrat, mais autorise aussi le locataire proprietaire (lecture seule)."""
+    contrat = db.get(Contrat, contrat_id)
+    if not contrat:
+        raise HTTPException(status_code=404, detail="Contrat introuvable")
+    is_owner_bailleur = contrat.bailleur_id == current_user.id
+    is_owner_locataire = (
+        current_user.role == UserRole.LOCATAIRE and contrat.locataire.utilisateur_id == current_user.id
+    )
+    if current_user.role != UserRole.ADMIN and not is_owner_bailleur and not is_owner_locataire:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    return contrat
+
+
 @router.get("/{contrat_id}", response_model=ContratRead)
 def get_contrat(contrat_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return _get_owned_contrat(db, contrat_id, current_user)
+    contrat = _get_viewable_contrat(db, contrat_id, current_user)
+    contrat.en_retard = est_en_retard(db, contrat)
+    return contrat
 
 
 @router.patch("/{contrat_id}", response_model=ContratRead)
@@ -83,7 +104,7 @@ def update_contrat(
 
 @router.get("/{contrat_id}/pdf")
 def download_contrat_pdf(contrat_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    contrat = _get_owned_contrat(db, contrat_id, current_user)
+    contrat = _get_viewable_contrat(db, contrat_id, current_user)
     if not contrat.pdf_path:
         raise HTTPException(status_code=404, detail="PDF non disponible")
     full_path = os.path.join(STORAGE_ROOT, contrat.pdf_path)

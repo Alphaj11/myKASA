@@ -23,6 +23,7 @@ class UserRead(UserBase):
     role: UserRole
     plan: PlanType
     is_active: bool
+    is_email_verified: bool
     created_at: datetime
 
 
@@ -32,3 +33,13 @@ class UserUpdatePlan(BaseModel):
 
 class UserUpdateActive(BaseModel):
     is_active: bool
+
+
+class UpdateProfileRequest(BaseModel):
+    full_name: str
+    phone: str | None = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str

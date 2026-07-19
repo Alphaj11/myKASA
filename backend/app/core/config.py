@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
     cors_origins: str = "http://localhost:3000"
+    frontend_url: str = "http://localhost:3000"
 
     @property
     def cors_origins_list(self) -> list[str]:

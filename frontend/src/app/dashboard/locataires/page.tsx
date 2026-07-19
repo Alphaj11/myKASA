@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Users, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Plus, Users, Loader2, Pencil, Trash2, Search, Paperclip, FileCheck2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,22 +22,88 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, apiErrorMessage } from "@/lib/api";
 import type { Locataire, Logement } from "@/types";
+
+const emptyForm = { nom: "", prenom: "", email: "", telephone: "", logement_id: "" };
+
+function DocumentButton({ locataire, onUploaded }: { locataire: Locataire; onUploaded: () => void }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      await api.post(`/api/locataires/${locataire.id}/document`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Document enregistré");
+      onUploaded();
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
+    } finally {
+      setIsUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function viewDocument() {
+    try {
+      const res = await api.get(`/api/locataires/${locataire.id}/document`, { responseType: "blob" });
+      const url = window.URL.createObjectURL(res.data);
+      window.open(url, "_blank");
+    } catch {
+      toast.error("Impossible d'ouvrir le document");
+    }
+  }
+
+  return (
+    <div className="mt-3 flex items-center gap-2">
+      <input ref={fileInputRef} type="file" accept=".pdf,.png,.jpg,.jpeg" className="hidden" onChange={handleFileChange} />
+      {locataire.piece_identite ? (
+        <Button variant="outline" size="sm" onClick={viewDocument} className="h-7 px-2 text-xs">
+          <FileCheck2 className="mr-1 h-3.5 w-3.5" /> Voir le document
+        </Button>
+      ) : null}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 px-2 text-xs text-muted-foreground"
+        disabled={isUploading}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        {isUploading ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Paperclip className="mr-1 h-3.5 w-3.5" />}
+        {locataire.piece_identite ? "Remplacer" : "Ajouter une pièce d'identité"}
+      </Button>
+    </div>
+  );
+}
 
 export default function LocatairesPage() {
   const [locataires, setLocataires] = useState<Locataire[] | null>(null);
   const [logements, setLogements] = useState<Logement[]>([]);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Locataire | null>(null);
+  const [deleting, setDeleting] = useState<Locataire | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    nom: "",
-    prenom: "",
-    email: "",
-    telephone: "",
-    logement_id: "",
-  });
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [form, setForm] = useState(emptyForm);
 
   function load() {
     api.get<Locataire[]>("/api/locataires").then((res) => setLocataires(res.data));
@@ -51,19 +117,42 @@ export default function LocatairesPage() {
     return logements.find((l) => l.id === id)?.nom ?? `Logement #${id}`;
   }
 
+  function openCreate() {
+    setEditing(null);
+    setForm(emptyForm);
+    setOpen(true);
+  }
+
+  function openEdit(locataire: Locataire) {
+    setEditing(locataire);
+    setForm({
+      nom: locataire.nom,
+      prenom: locataire.prenom,
+      email: locataire.email ?? "",
+      telephone: locataire.telephone ?? "",
+      logement_id: locataire.logement_id ? String(locataire.logement_id) : "",
+    });
+    setOpen(true);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsSubmitting(true);
+    const payload = {
+      nom: form.nom,
+      prenom: form.prenom,
+      email: form.email || null,
+      telephone: form.telephone || null,
+      logement_id: form.logement_id ? Number(form.logement_id) : null,
+    };
     try {
-      await api.post("/api/locataires", {
-        nom: form.nom,
-        prenom: form.prenom,
-        email: form.email || null,
-        telephone: form.telephone || null,
-        logement_id: form.logement_id ? Number(form.logement_id) : null,
-      });
-      toast.success("Locataire ajouté");
-      setForm({ nom: "", prenom: "", email: "", telephone: "", logement_id: "" });
+      if (editing) {
+        await api.patch(`/api/locataires/${editing.id}`, payload);
+        toast.success("Locataire mis à jour");
+      } else {
+        await api.post("/api/locataires", payload);
+        toast.success("Locataire ajouté");
+      }
       setOpen(false);
       load();
     } catch (error) {
@@ -73,6 +162,27 @@ export default function LocatairesPage() {
     }
   }
 
+  async function handleDelete() {
+    if (!deleting) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/api/locataires/${deleting.id}`);
+      toast.success("Locataire supprimé");
+      setDeleting(null);
+      load();
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  const filteredLocataires = locataires?.filter((l) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return `${l.prenom} ${l.nom}`.toLowerCase().includes(q) || (l.email ?? "").toLowerCase().includes(q);
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -81,12 +191,12 @@ export default function LocatairesPage() {
           <p className="text-sm text-muted-foreground">Fiches et association aux logements.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button />}>
+          <DialogTrigger render={<Button onClick={openCreate} />}>
             <Plus className="mr-1 h-4 w-4" /> Ajouter un locataire
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nouveau locataire</DialogTitle>
+              <DialogTitle>{editing ? "Modifier le locataire" : "Nouveau locataire"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -148,12 +258,30 @@ export default function LocatairesPage() {
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Créer le locataire
+                {editing ? "Enregistrer les modifications" : "Créer le locataire"}
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Supprimer {deleting?.prenom} {deleting?.nom} ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {locataires === null ? (
         <Skeleton className="h-64 rounded-xl" />
@@ -163,10 +291,33 @@ export default function LocatairesPage() {
           Aucun locataire pour l&apos;instant.
         </Card>
       ) : (
+        <>
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher un locataire..."
+            className="pl-9"
+          />
+        </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {locataires.map((locataire) => (
-            <Card key={locataire.id} className="p-5">
-              <div className="flex items-center gap-3">
+          {filteredLocataires?.map((locataire) => (
+            <Card key={locataire.id} className="relative p-5">
+              <div className="absolute right-3 top-3 flex gap-1">
+                <Button variant="ghost" size="icon-sm" onClick={() => openEdit(locataire)} title="Modifier">
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setDeleting(locataire)}
+                  title="Supprimer"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="flex items-center gap-3 pr-14">
                 <Avatar>
                   <AvatarFallback>
                     {locataire.prenom[0]}
@@ -181,9 +332,11 @@ export default function LocatairesPage() {
                 </div>
               </div>
               <p className="mt-3 text-xs font-medium text-primary">{logementName(locataire.logement_id)}</p>
+              <DocumentButton locataire={locataire} onUploaded={load} />
             </Card>
           ))}
         </div>
+        </>
       )}
     </div>
   );

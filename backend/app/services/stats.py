@@ -27,6 +27,21 @@ def _last_n_periods(n: int = 6) -> list[str]:
     return list(reversed(periods))
 
 
+def est_en_retard(db: Session, contrat: Contrat) -> bool:
+    """Un contrat actif est en retard si aucun paiement n'existe pour la periode
+    en cours et que le jour de paiement du mois est deja passe."""
+    if contrat.statut != StatutContrat.ACTIF:
+        return False
+    if date.today().day <= contrat.jour_paiement:
+        return False
+    deja_paye = (
+        db.query(Paiement)
+        .filter(Paiement.contrat_id == contrat.id, Paiement.periode == _current_period())
+        .first()
+    )
+    return deja_paye is None
+
+
 def compute_dashboard_stats(db: Session, bailleur_id: int) -> dict:
     period = _current_period()
 
@@ -42,16 +57,10 @@ def compute_dashboard_stats(db: Session, bailleur_id: int) -> dict:
         .filter(Contrat.bailleur_id == bailleur_id, Contrat.statut == StatutContrat.ACTIF)
         .all()
     )
-    today_day = date.today().day
     contrats_en_retard = 0
     loyers_en_retard_montant = 0.0
     for contrat in contrats_actifs:
-        deja_paye = (
-            db.query(Paiement)
-            .filter(Paiement.contrat_id == contrat.id, Paiement.periode == period)
-            .first()
-        )
-        if not deja_paye and today_day > contrat.jour_paiement:
+        if est_en_retard(db, contrat):
             contrats_en_retard += 1
             loyers_en_retard_montant += float(contrat.loyer_mensuel)
 

@@ -3,7 +3,9 @@ from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user, require_roles
 from app.db.session import get_db
+from app.models.contrat import Contrat
 from app.models.immeuble import Immeuble
+from app.models.logement import Logement
 from app.models.user import User, UserRole
 from app.schemas.immeuble import ImmeubleCreate, ImmeubleRead, ImmeubleUpdate
 
@@ -69,5 +71,17 @@ def update_immeuble(
 @router.delete("/{immeuble_id}", status_code=204)
 def delete_immeuble(immeuble_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     immeuble = _get_owned_immeuble(db, immeuble_id, current_user)
+    has_contrats = (
+        db.query(Contrat)
+        .join(Logement, Contrat.logement_id == Logement.id)
+        .filter(Logement.immeuble_id == immeuble_id)
+        .first()
+        is not None
+    )
+    if has_contrats:
+        raise HTTPException(
+            status_code=409,
+            detail="Impossible de supprimer un immeuble dont des logements ont des contrats associés.",
+        )
     db.delete(immeuble)
     db.commit()

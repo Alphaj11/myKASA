@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, FileText, Download, Loader2, Archive } from "lucide-react";
+import { Plus, FileText, Download, Loader2, Archive, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -22,6 +22,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Table,
   TableBody,
@@ -46,6 +56,9 @@ export default function ContratsPage() {
   const [locataires, setLocataires] = useState<Locataire[]>([]);
   const [open, setOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [archiving, setArchiving] = useState<Contrat | null>(null);
+  const [isArchiving, setIsArchiving] = useState(false);
+  const [search, setSearch] = useState("");
   const [form, setForm] = useState({
     logement_id: "",
     locataire_id: "",
@@ -114,15 +127,26 @@ export default function ContratsPage() {
     }
   }
 
-  async function archive(contrat: Contrat) {
+  async function confirmArchive() {
+    if (!archiving) return;
+    setIsArchiving(true);
     try {
-      await api.patch(`/api/contrats/${contrat.id}`, { statut: "ARCHIVE" });
+      await api.patch(`/api/contrats/${archiving.id}`, { statut: "ARCHIVE" });
       toast.success("Contrat archivé");
+      setArchiving(null);
       load();
     } catch (error) {
       toast.error(apiErrorMessage(error));
+    } finally {
+      setIsArchiving(false);
     }
   }
+
+  const filteredContrats = contrats?.filter((c) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return logementName(c.logement_id).toLowerCase().includes(q) || locataireName(c.locataire_id).toLowerCase().includes(q);
+  });
 
   return (
     <div className="space-y-6">
@@ -234,6 +258,24 @@ export default function ContratsPage() {
         </Dialog>
       </div>
 
+      <AlertDialog open={!!archiving} onOpenChange={(v) => !v && setArchiving(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Archiver ce contrat ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Le logement redeviendra vacant. Le contrat restera consultable dans l&apos;historique.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmArchive} disabled={isArchiving}>
+              {isArchiving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Archiver
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {contrats === null ? (
         <Skeleton className="h-64 rounded-xl" />
       ) : contrats.length === 0 ? (
@@ -242,6 +284,16 @@ export default function ContratsPage() {
           Aucun contrat pour l&apos;instant.
         </Card>
       ) : (
+        <>
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher un logement ou un locataire..."
+            className="pl-9"
+          />
+        </div>
         <Card className="overflow-hidden p-0">
           <Table>
             <TableHeader>
@@ -255,16 +307,17 @@ export default function ContratsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {contrats.map((contrat) => (
+              {filteredContrats?.map((contrat) => (
                 <TableRow key={contrat.id}>
                   <TableCell className="font-medium">{logementName(contrat.logement_id)}</TableCell>
                   <TableCell>{locataireName(contrat.locataire_id)}</TableCell>
                   <TableCell>{contrat.date_debut}</TableCell>
                   <TableCell>{new Intl.NumberFormat("fr-FR").format(contrat.loyer_mensuel)} FCFA</TableCell>
-                  <TableCell>
+                  <TableCell className="flex items-center gap-2">
                     <Badge variant={contrat.statut === "ACTIF" ? "default" : "secondary"}>
                       {statutLabels[contrat.statut]}
                     </Badge>
+                    {contrat.en_retard && <Badge variant="destructive">En retard</Badge>}
                   </TableCell>
                   <TableCell className="flex justify-end gap-2">
                     {contrat.pdf_path && (
@@ -278,7 +331,7 @@ export default function ContratsPage() {
                       </Button>
                     )}
                     {contrat.statut === "ACTIF" && (
-                      <Button variant="outline" size="icon" onClick={() => archive(contrat)} title="Archiver">
+                      <Button variant="outline" size="icon" onClick={() => setArchiving(contrat)} title="Archiver">
                         <Archive className="h-4 w-4" />
                       </Button>
                     )}
@@ -288,6 +341,7 @@ export default function ContratsPage() {
             </TableBody>
           </Table>
         </Card>
+        </>
       )}
     </div>
   );

@@ -33,6 +33,18 @@ def create_refresh_token(subject: str) -> str:
     return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
 
 
+def create_reset_token(subject: str) -> str:
+    expire = datetime.utcnow() + timedelta(minutes=30)
+    payload = {"sub": subject, "exp": expire, "type": "reset"}
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+
+
+def create_verify_email_token(subject: str) -> str:
+    expire = datetime.utcnow() + timedelta(days=2)
+    payload = {"sub": subject, "exp": expire, "type": "verify"}
+    return jwt.encode(payload, settings.secret_key, algorithm=settings.algorithm)
+
+
 def decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])

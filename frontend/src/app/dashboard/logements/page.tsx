@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Home, Loader2 } from "lucide-react";
+import { Plus, Home, Loader2, Pencil, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -23,6 +23,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -32,7 +42,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, apiErrorMessage } from "@/lib/api";
-import type { Immeuble, Logement, TypeLogement } from "@/types";
+import type { Immeuble, Logement, StatutLogement, TypeLogement } from "@/types";
 
 const typeLabels: Record<TypeLogement, string> = {
   STUDIO: "Studio",
@@ -41,17 +51,29 @@ const typeLabels: Record<TypeLogement, string> = {
   CHAMBRE: "Chambre",
 };
 
+const statutLabels: Record<StatutLogement, string> = {
+  VACANT: "Vacant",
+  OCCUPE: "Occupé",
+};
+
+const emptyForm = {
+  nom: "",
+  type: "APPARTEMENT" as TypeLogement,
+  loyer_mensuel: "",
+  immeuble_id: "",
+  statut: "VACANT" as StatutLogement,
+};
+
 export default function LogementsPage() {
   const [logements, setLogements] = useState<Logement[] | null>(null);
   const [immeubles, setImmeubles] = useState<Immeuble[]>([]);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Logement | null>(null);
+  const [deleting, setDeleting] = useState<Logement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [form, setForm] = useState({
-    nom: "",
-    type: "APPARTEMENT" as TypeLogement,
-    loyer_mensuel: "",
-    immeuble_id: "",
-  });
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [search, setSearch] = useState("");
+  const [form, setForm] = useState(emptyForm);
 
   function load() {
     api.get<Logement[]>("/api/logements").then((res) => setLogements(res.data));
@@ -64,28 +86,76 @@ export default function LogementsPage() {
     return immeubles.find((i) => i.id === id)?.nom ?? `Immeuble #${id}`;
   }
 
+  const filteredLogements = logements?.filter((l) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return l.nom.toLowerCase().includes(q) || immeubleName(l.immeuble_id).toLowerCase().includes(q);
+  });
+
+  function openCreate() {
+    setEditing(null);
+    setForm(emptyForm);
+    setOpen(true);
+  }
+
+  function openEdit(logement: Logement) {
+    setEditing(logement);
+    setForm({
+      nom: logement.nom,
+      type: logement.type,
+      loyer_mensuel: String(logement.loyer_mensuel),
+      immeuble_id: String(logement.immeuble_id),
+      statut: logement.statut,
+    });
+    setOpen(true);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.immeuble_id) {
+    if (!editing && !form.immeuble_id) {
       toast.error("Sélectionnez un immeuble");
       return;
     }
     setIsSubmitting(true);
     try {
-      await api.post("/api/logements", {
-        nom: form.nom,
-        type: form.type,
-        loyer_mensuel: Number(form.loyer_mensuel),
-        immeuble_id: Number(form.immeuble_id),
-      });
-      toast.success("Logement ajouté");
-      setForm({ nom: "", type: "APPARTEMENT", loyer_mensuel: "", immeuble_id: "" });
+      if (editing) {
+        await api.patch(`/api/logements/${editing.id}`, {
+          nom: form.nom,
+          type: form.type,
+          loyer_mensuel: Number(form.loyer_mensuel),
+          statut: form.statut,
+        });
+        toast.success("Logement mis à jour");
+      } else {
+        await api.post("/api/logements", {
+          nom: form.nom,
+          type: form.type,
+          loyer_mensuel: Number(form.loyer_mensuel),
+          immeuble_id: Number(form.immeuble_id),
+        });
+        toast.success("Logement ajouté");
+      }
       setOpen(false);
       load();
     } catch (error) {
       toast.error(apiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleting) return;
+    setIsDeleting(true);
+    try {
+      await api.delete(`/api/logements/${deleting.id}`);
+      toast.success("Logement supprimé");
+      setDeleting(null);
+      load();
+    } catch (error) {
+      toast.error(apiErrorMessage(error));
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -97,33 +167,35 @@ export default function LogementsPage() {
           <p className="text-sm text-muted-foreground">Occupation et disponibilité de vos logements.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger render={<Button disabled={immeubles.length === 0} />}>
+          <DialogTrigger render={<Button disabled={immeubles.length === 0} onClick={openCreate} />}>
             <Plus className="mr-1 h-4 w-4" /> Ajouter un logement
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nouveau logement</DialogTitle>
+              <DialogTitle>{editing ? "Modifier le logement" : "Nouveau logement"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Immeuble</Label>
-                <Select
-                  value={form.immeuble_id}
-                  onValueChange={(v) => setForm({ ...form, immeuble_id: v ?? "" })}
-                  items={immeubles.map((i) => ({ value: String(i.id), label: i.nom }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choisir un immeuble" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {immeubles.map((i) => (
-                      <SelectItem key={i.id} value={String(i.id)}>
-                        {i.nom}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {!editing && (
+                <div className="space-y-2">
+                  <Label>Immeuble</Label>
+                  <Select
+                    value={form.immeuble_id}
+                    onValueChange={(v) => setForm({ ...form, immeuble_id: v ?? "" })}
+                    items={immeubles.map((i) => ({ value: String(i.id), label: i.nom }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Choisir un immeuble" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {immeubles.map((i) => (
+                        <SelectItem key={i.id} value={String(i.id)}>
+                          {i.nom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="nom">Nom / numéro</Label>
                 <Input
@@ -165,14 +237,51 @@ export default function LogementsPage() {
                   placeholder="150000"
                 />
               </div>
+              {editing && (
+                <div className="space-y-2">
+                  <Label>Statut</Label>
+                  <Select
+                    value={form.statut}
+                    onValueChange={(v) => setForm({ ...form, statut: v as StatutLogement })}
+                    items={Object.entries(statutLabels).map(([value, label]) => ({ value, label }))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(statutLabels).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Créer le logement
+                {editing ? "Enregistrer les modifications" : "Créer le logement"}
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+
+      <AlertDialog open={!!deleting} onOpenChange={(v) => !v && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer {deleting?.nom} ?</AlertDialogTitle>
+            <AlertDialogDescription>Cette action est irréversible.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={handleDelete} disabled={isDeleting}>
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {logements === null ? (
         <Skeleton className="h-64 rounded-xl" />
@@ -182,6 +291,16 @@ export default function LogementsPage() {
           Aucun logement pour l&apos;instant.
         </Card>
       ) : (
+        <>
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher un logement..."
+            className="pl-9"
+          />
+        </div>
         <Card className="overflow-hidden p-0">
           <Table>
             <TableHeader>
@@ -191,10 +310,11 @@ export default function LogementsPage() {
                 <TableHead>Type</TableHead>
                 <TableHead>Loyer</TableHead>
                 <TableHead>Statut</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {logements.map((logement) => (
+              {filteredLogements?.map((logement) => (
                 <TableRow key={logement.id}>
                   <TableCell className="font-medium">{logement.nom}</TableCell>
                   <TableCell>{immeubleName(logement.immeuble_id)}</TableCell>
@@ -202,14 +322,23 @@ export default function LogementsPage() {
                   <TableCell>{new Intl.NumberFormat("fr-FR").format(logement.loyer_mensuel)} FCFA</TableCell>
                   <TableCell>
                     <Badge variant={logement.statut === "OCCUPE" ? "default" : "secondary"}>
-                      {logement.statut === "OCCUPE" ? "Occupé" : "Vacant"}
+                      {statutLabels[logement.statut]}
                     </Badge>
+                  </TableCell>
+                  <TableCell className="flex justify-end gap-2">
+                    <Button variant="outline" size="icon" onClick={() => openEdit(logement)} title="Modifier">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => setDeleting(logement)} title="Supprimer">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </Card>
+        </>
       )}
     </div>
   );

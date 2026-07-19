@@ -33,7 +33,11 @@ def _get_owned_quittance(db: Session, quittance_id: int, current_user: User) -> 
     if not quittance:
         raise HTTPException(status_code=404, detail="Quittance introuvable")
     contrat = quittance.paiement.contrat
-    if current_user.role != UserRole.ADMIN and contrat.bailleur_id != current_user.id:
+    is_owner_bailleur = contrat.bailleur_id == current_user.id
+    is_owner_locataire = (
+        current_user.role == UserRole.LOCATAIRE and contrat.locataire.utilisateur_id == current_user.id
+    )
+    if current_user.role != UserRole.ADMIN and not is_owner_bailleur and not is_owner_locataire:
         raise HTTPException(status_code=403, detail="Accès refusé")
     return quittance
 

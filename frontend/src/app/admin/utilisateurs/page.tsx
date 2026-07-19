@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -26,6 +28,7 @@ import type { PlanType, User } from "@/types";
 
 export default function UtilisateursPage() {
   const [users, setUsers] = useState<User[] | null>(null);
+  const [search, setSearch] = useState("");
 
   function load() {
     api.get<User[]>("/api/admin/users").then((res) => setUsers(res.data));
@@ -53,6 +56,12 @@ export default function UtilisateursPage() {
     }
   }
 
+  const filteredUsers = users?.filter((u) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return u.full_name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
+  });
+
   return (
     <div className="space-y-6">
       <div>
@@ -63,6 +72,16 @@ export default function UtilisateursPage() {
       {users === null ? (
         <Skeleton className="h-64 rounded-xl" />
       ) : (
+        <>
+        <div className="relative max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Rechercher un utilisateur..."
+            className="pl-9"
+          />
+        </div>
         <Card className="overflow-hidden p-0">
           <Table>
             <TableHeader>
@@ -75,7 +94,7 @@ export default function UtilisateursPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
+              {filteredUsers?.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.full_name}</TableCell>
                   <TableCell>{user.email}</TableCell>
@@ -118,6 +137,7 @@ export default function UtilisateursPage() {
             </TableBody>
           </Table>
         </Card>
+        </>
       )}
     </div>
   );

@@ -1,11 +1,12 @@
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.db.base import Base
-from app.db.session import engine
-import app.models  # noqa: F401 -- ensures every model is registered on Base.metadata
-from app.routers import admin, auth, contrats, dashboard, immeubles, locataires, logements, paiements, quittances
+from app.routers import admin, auth, contrats, dashboard, immeubles, locataires, logements, me, paiements, quittances
+
+logger = logging.getLogger("localtrack.main")
 
 app = FastAPI(title="LocalTrack API", version="0.1.0")
 
@@ -20,7 +21,12 @@ app.add_middleware(
 
 @app.on_event("startup")
 def on_startup():
-    Base.metadata.create_all(bind=engine)
+    # Le schema est gere par les migrations Alembic (voir alembic/ et README) :
+    # executez `alembic upgrade head` avant de demarrer l'API sur une base neuve.
+    if settings.secret_key == "change-me-to-a-random-secret-in-production":
+        logger.warning(
+            "SECRET_KEY par defaut detectee : definissez une vraie valeur secrete dans .env avant tout deploiement."
+        )
 
 
 app.include_router(auth.router)
@@ -32,6 +38,7 @@ app.include_router(paiements.router)
 app.include_router(quittances.router)
 app.include_router(dashboard.router)
 app.include_router(admin.router)
+app.include_router(me.router)
 
 
 @app.get("/api/health")

@@ -31,6 +31,7 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False, default=UserRole.BAILLEUR)
     plan: Mapped[PlanType] = mapped_column(Enum(PlanType), nullable=False, default=PlanType.FREEMIUM)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     immeubles = relationship("Immeuble", back_populates="bailleur", cascade="all, delete-orphan")

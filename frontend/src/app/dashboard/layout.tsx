@@ -8,6 +8,7 @@ import {
   FileText,
   Wallet,
   Receipt,
+  UserCircle,
 } from "lucide-react";
 import { AppShell, type NavItem } from "@/components/app-shell";
 
@@ -19,6 +20,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/contrats", label: "Contrats", icon: FileText },
   { href: "/dashboard/paiements", label: "Paiements", icon: Wallet },
   { href: "/dashboard/quittances", label: "Quittances", icon: Receipt },
+  { href: "/profil", label: "Profil", icon: UserCircle },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

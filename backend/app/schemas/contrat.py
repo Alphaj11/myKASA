@@ -32,3 +32,4 @@ class ContratRead(ContratBase):
     statut: StatutContrat
     pdf_path: str | None
     created_at: datetime
+    en_retard: bool = False
