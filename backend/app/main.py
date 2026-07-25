@@ -1,10 +1,13 @@
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.routers import admin, auth, contrats, dashboard, immeubles, locataires, logements, me, paiements, quittances
+from app.services.pdf import STORAGE_ROOT
 
 logger = logging.getLogger("localtrack.main")
 
@@ -39,6 +42,10 @@ app.include_router(quittances.router)
 app.include_router(dashboard.router)
 app.include_router(admin.router)
 app.include_router(me.router)
+
+_images_dir = os.path.join(STORAGE_ROOT, "images")
+os.makedirs(_images_dir, exist_ok=True)
+app.mount("/static/images", StaticFiles(directory=_images_dir), name="static_images")
 
 
 @app.get("/api/health")

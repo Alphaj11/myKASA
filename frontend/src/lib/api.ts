@@ -1,6 +1,6 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -81,6 +81,11 @@ api.interceptors.response.use(
     return api(config);
   }
 );
+
+export function imgUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
+  return `${API_URL}${path}`;
+}
 
 export function apiErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {

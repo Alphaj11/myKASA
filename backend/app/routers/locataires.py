@@ -12,6 +12,7 @@ from app.models.logement import Logement, StatutLogement
 from app.models.user import User, UserRole
 from app.schemas.locataire import LocataireCreate, LocataireRead, LocataireUpdate
 from app.services.documents import STORAGE_ROOT, save_locataire_document
+from app.services.images import delete_image, save_image
 
 router = APIRouter(prefix="/api/locataires", tags=["locataires"])
 
@@ -83,8 +84,25 @@ def delete_locataire(
             status_code=409,
             detail="Impossible de supprimer un locataire ayant des contrats associés.",
         )
+    delete_image(locataire.photo_url)
     db.delete(locataire)
     db.commit()
+
+
+@router.post("/{locataire_id}/photo", response_model=LocataireRead)
+async def upload_locataire_photo(
+    locataire_id: int,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    locataire = _get_owned_locataire(db, locataire_id, current_user)
+    content = await file.read()
+    delete_image(locataire.photo_url)
+    locataire.photo_url = save_image("locataires", file, content)
+    db.commit()
+    db.refresh(locataire)
+    return locataire
 
 
 @router.post("/{locataire_id}/document", response_model=LocataireRead)

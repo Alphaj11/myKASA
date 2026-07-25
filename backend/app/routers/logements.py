@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user, require_roles
@@ -8,6 +8,7 @@ from app.models.immeuble import Immeuble
 from app.models.logement import Logement
 from app.models.user import User, UserRole
 from app.schemas.logement import LogementCreate, LogementRead, LogementUpdate
+from app.services.images import delete_image, save_image
 
 router = APIRouter(prefix="/api/logements", tags=["logements"])
 
@@ -77,6 +78,22 @@ def update_logement(
     return logement
 
 
+@router.post("/{logement_id}/photo", response_model=LogementRead)
+async def upload_logement_photo(
+    logement_id: int,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    logement = _get_owned_logement(db, logement_id, current_user)
+    content = await file.read()
+    delete_image(logement.photo_principale_url)
+    logement.photo_principale_url = save_image("logements", file, content)
+    db.commit()
+    db.refresh(logement)
+    return logement
+
+
 @router.delete("/{logement_id}", status_code=204)
 def delete_logement(logement_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     logement = _get_owned_logement(db, logement_id, current_user)
@@ -86,5 +103,6 @@ def delete_logement(logement_id: int, db: Session = Depends(get_db), current_use
             status_code=409,
             detail="Impossible de supprimer un logement ayant des contrats associés.",
         )
+    delete_image(logement.photo_principale_url)
     db.delete(logement)
     db.commit()

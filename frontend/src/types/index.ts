@@ -11,6 +11,11 @@ export interface User {
   is_active: boolean;
   is_email_verified: boolean;
   created_at: string;
+  avatar_url: string | null;
+  date_naissance: string | null;
+  adresse: string | null;
+  cni_numero: string | null;
+  cni_url: string | null;
 }
 
 export interface Immeuble {
@@ -19,11 +24,18 @@ export interface Immeuble {
   nom: string;
   adresse: string;
   ville: string;
+  description: string | null;
+  type_bien: string | null;
+  superficie_totale: number | null;
+  annee_construction: number | null;
+  photo_principale_url: string | null;
+  verification_level: number;
+  declaration_acceptee: boolean;
   created_at: string;
   nb_logements: number;
 }
 
-export type TypeLogement = "STUDIO" | "APPARTEMENT" | "MAISON" | "CHAMBRE";
+export type TypeLogement = "STUDIO" | "APPARTEMENT" | "MAISON" | "CHAMBRE" | "VILLA" | "BUREAU";
 export type StatutLogement = "VACANT" | "OCCUPE";
 
 export interface Logement {
@@ -33,6 +45,13 @@ export interface Logement {
   type: TypeLogement;
   loyer_mensuel: number;
   statut: StatutLogement;
+  description: string | null;
+  superficie: number | null;
+  etage: number | null;
+  nb_chambres: number | null;
+  nb_salles_de_bain: number | null;
+  meuble: boolean;
+  photo_principale_url: string | null;
   created_at: string;
 }
 
@@ -45,6 +64,12 @@ export interface Locataire {
   email: string | null;
   telephone: string | null;
   piece_identite: string | null;
+  date_naissance: string | null;
+  adresse: string | null;
+  cni_numero: string | null;
+  photo_url: string | null;
+  profession: string | null;
+  employeur: string | null;
   created_at: string;
 }
 

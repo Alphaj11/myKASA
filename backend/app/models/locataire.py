@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import String, DateTime, ForeignKey
+from sqlalchemy import Date, DateTime, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -18,6 +18,12 @@ class Locataire(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     telephone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     piece_identite: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    date_naissance: Mapped[date | None] = mapped_column(Date, nullable=True)
+    adresse: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cni_numero: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    photo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    profession: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    employeur: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     logement = relationship("Logement", back_populates="locataires", foreign_keys=[logement_id])

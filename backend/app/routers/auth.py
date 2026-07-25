@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -28,6 +28,7 @@ from app.schemas.auth import (
     VerifyEmailRequest,
 )
 from app.schemas.user import ChangePasswordRequest, UpdateProfileRequest, UserCreate, UserRead
+from app.services.images import delete_image, save_image
 
 logger = logging.getLogger("localtrack.auth")
 
@@ -124,6 +125,23 @@ def update_profile(
 ):
     current_user.full_name = payload.full_name
     current_user.phone = payload.phone
+    current_user.date_naissance = payload.date_naissance
+    current_user.adresse = payload.adresse
+    current_user.cni_numero = payload.cni_numero
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/me/avatar", response_model=UserRead)
+async def upload_avatar(
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    content = await file.read()
+    delete_image(current_user.avatar_url)
+    current_user.avatar_url = save_image("avatars", file, content)
     db.commit()
     db.refresh(current_user)
     return current_user

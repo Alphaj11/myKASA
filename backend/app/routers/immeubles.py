@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app.core.security import get_current_user, require_roles
@@ -8,6 +8,7 @@ from app.models.immeuble import Immeuble
 from app.models.logement import Logement
 from app.models.user import User, UserRole
 from app.schemas.immeuble import ImmeubleCreate, ImmeubleRead, ImmeubleUpdate
+from app.services.images import delete_image, save_image
 
 router = APIRouter(prefix="/api/immeubles", tags=["immeubles"])
 
@@ -32,7 +33,14 @@ def create_immeuble(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.BAILLEUR)),
 ):
-    immeuble = Immeuble(**payload.model_dump(), bailleur_id=current_user.id)
+    data = payload.model_dump()
+    declaration = data.pop("declaration_acceptee", False)
+    immeuble = Immeuble(
+        **data,
+        bailleur_id=current_user.id,
+        declaration_acceptee=declaration,
+        verification_level=1 if declaration else 0,
+    )
     db.add(immeuble)
     db.commit()
     db.refresh(immeuble)
@@ -68,6 +76,22 @@ def update_immeuble(
     return _to_read(immeuble)
 
 
+@router.post("/{immeuble_id}/photo", response_model=ImmeubleRead)
+async def upload_immeuble_photo(
+    immeuble_id: int,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    immeuble = _get_owned_immeuble(db, immeuble_id, current_user)
+    content = await file.read()
+    delete_image(immeuble.photo_principale_url)
+    immeuble.photo_principale_url = save_image("immeubles", file, content)
+    db.commit()
+    db.refresh(immeuble)
+    return _to_read(immeuble)
+
+
 @router.delete("/{immeuble_id}", status_code=204)
 def delete_immeuble(immeuble_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     immeuble = _get_owned_immeuble(db, immeuble_id, current_user)
@@ -83,5 +107,6 @@ def delete_immeuble(immeuble_id: int, db: Session = Depends(get_db), current_use
             status_code=409,
             detail="Impossible de supprimer un immeuble dont des logements ont des contrats associés.",
         )
+    delete_image(immeuble.photo_principale_url)
     db.delete(immeuble)
     db.commit()

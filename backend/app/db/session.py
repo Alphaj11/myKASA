@@ -1,11 +1,19 @@
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-connect_args = {"check_same_thread": False} if settings.database_url.startswith("sqlite") else {}
+_db_url = settings.database_url
+if _db_url.startswith("sqlite:///./"):
+    _rel = _db_url[len("sqlite:///./"):]
+    _backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    _db_url = f"sqlite:///{os.path.join(_backend_root, _rel)}"
 
-engine = create_engine(settings.database_url, connect_args=connect_args)
+connect_args = {"check_same_thread": False} if _db_url.startswith("sqlite") else {}
+
+engine = create_engine(_db_url, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 

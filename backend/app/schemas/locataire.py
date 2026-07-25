@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -9,6 +9,11 @@ class LocataireBase(BaseModel):
     email: str | None = None
     telephone: str | None = None
     piece_identite: str | None = None
+    date_naissance: date | None = None
+    adresse: str | None = None
+    cni_numero: str | None = None
+    profession: str | None = None
+    employeur: str | None = None
 
 
 class LocataireCreate(LocataireBase):
@@ -22,6 +27,11 @@ class LocataireUpdate(BaseModel):
     telephone: str | None = None
     piece_identite: str | None = None
     logement_id: int | None = None
+    date_naissance: date | None = None
+    adresse: str | None = None
+    cni_numero: str | None = None
+    profession: str | None = None
+    employeur: str | None = None
 
 
 class LocataireRead(LocataireBase):
@@ -30,4 +40,5 @@ class LocataireRead(LocataireBase):
     id: int
     bailleur_id: int
     logement_id: int | None
+    photo_url: str | None = None
     created_at: datetime

@@ -9,6 +9,12 @@ class LogementBase(BaseModel):
     nom: str
     type: TypeLogement
     loyer_mensuel: float
+    description: str | None = None
+    superficie: float | None = None
+    etage: int | None = None
+    nb_chambres: int | None = None
+    nb_salles_de_bain: int | None = None
+    meuble: bool = False
 
 
 class LogementCreate(LogementBase):
@@ -20,6 +26,12 @@ class LogementUpdate(BaseModel):
     type: TypeLogement | None = None
     loyer_mensuel: float | None = None
     statut: StatutLogement | None = None
+    description: str | None = None
+    superficie: float | None = None
+    etage: int | None = None
+    nb_chambres: int | None = None
+    nb_salles_de_bain: int | None = None
+    meuble: bool | None = None
 
 
 class LogementRead(LogementBase):
@@ -28,4 +40,5 @@ class LogementRead(LogementBase):
     id: int
     immeuble_id: int
     statut: StatutLogement
+    photo_principale_url: str | None = None
     created_at: datetime

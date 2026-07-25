@@ -1,7 +1,7 @@
 import enum
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import String, Boolean, DateTime, Enum
+from sqlalchemy import Boolean, Date, DateTime, Enum, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -33,6 +33,12 @@ class User(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    date_naissance: Mapped[date | None] = mapped_column(Date, nullable=True)
+    adresse: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cni_numero: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    cni_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     immeubles = relationship("Immeuble", back_populates="bailleur", cascade="all, delete-orphan")
     locataire_profile = relationship(

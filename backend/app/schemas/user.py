@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, EmailStr, ConfigDict
 
@@ -25,6 +25,11 @@ class UserRead(UserBase):
     is_active: bool
     is_email_verified: bool
     created_at: datetime
+    avatar_url: str | None = None
+    date_naissance: date | None = None
+    adresse: str | None = None
+    cni_numero: str | None = None
+    cni_url: str | None = None
 
 
 class UserUpdatePlan(BaseModel):
@@ -38,6 +43,9 @@ class UserUpdateActive(BaseModel):
 class UpdateProfileRequest(BaseModel):
     full_name: str
     phone: str | None = None
+    date_naissance: date | None = None
+    adresse: str | None = None
+    cni_numero: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):
