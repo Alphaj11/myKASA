@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, FileText, Download, Loader2, Archive, Search } from "lucide-react";
+import { Plus, FileText, Download, Loader2, Archive, Search, PenLine, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -41,13 +41,27 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SignatureCanvas } from "@/components/signature-canvas";
 import { api, apiErrorMessage } from "@/lib/api";
 import type { Contrat, Locataire, Logement, StatutContrat } from "@/types";
 
-const statutLabels: Record<StatutContrat, string> = {
-  ACTIF: "Actif",
-  ARCHIVE: "Archivé",
-  RESILIE: "Résilié",
+const statutConfig: Record<StatutContrat, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+  EN_ATTENTE_SIGNATURE: { label: "À signer", variant: "outline" },
+  ACTIF: { label: "Actif", variant: "default" },
+  ARCHIVE: { label: "Archivé", variant: "secondary" },
+  RESILIE: { label: "Résilié", variant: "destructive" },
+};
+
+const emptyForm = {
+  logement_id: "",
+  locataire_id: "",
+  date_debut: "",
+  loyer_mensuel: "",
+  jour_paiement: "5",
+  depot_garantie: "",
+  duree_mois: "12",
+  lieu_signature: "",
+  juridiction: "",
 };
 
 export default function ContratsPage() {
@@ -59,14 +73,8 @@ export default function ContratsPage() {
   const [archiving, setArchiving] = useState<Contrat | null>(null);
   const [isArchiving, setIsArchiving] = useState(false);
   const [search, setSearch] = useState("");
-  const [form, setForm] = useState({
-    logement_id: "",
-    locataire_id: "",
-    date_debut: "",
-    loyer_mensuel: "",
-    jour_paiement: "5",
-    depot_garantie: "",
-  });
+  const [signingContrat, setSigningContrat] = useState<{ contrat: Contrat; role: "bailleur" | "locataire" } | null>(null);
+  const [form, setForm] = useState(emptyForm);
 
   function load() {
     api.get<Contrat[]>("/api/contrats").then((res) => setContrats(res.data));
@@ -86,11 +94,7 @@ export default function ContratsPage() {
 
   function handleLogementChange(logementId: string | null) {
     const logement = logements.find((l) => String(l.id) === logementId);
-    setForm({
-      ...form,
-      logement_id: logementId ?? "",
-      loyer_mensuel: logement ? String(logement.loyer_mensuel) : form.loyer_mensuel,
-    });
+    setForm({ ...form, logement_id: logementId ?? "", loyer_mensuel: logement ? String(logement.loyer_mensuel) : form.loyer_mensuel });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -108,16 +112,12 @@ export default function ContratsPage() {
         loyer_mensuel: Number(form.loyer_mensuel),
         jour_paiement: Number(form.jour_paiement),
         depot_garantie: form.depot_garantie ? Number(form.depot_garantie) : null,
+        duree_mois: form.duree_mois ? Number(form.duree_mois) : null,
+        lieu_signature: form.lieu_signature || null,
+        juridiction: form.juridiction || null,
       });
-      toast.success("Contrat créé et PDF généré");
-      setForm({
-        logement_id: "",
-        locataire_id: "",
-        date_debut: "",
-        loyer_mensuel: "",
-        jour_paiement: "5",
-        depot_garantie: "",
-      });
+      toast.success("Contrat créé — en attente de signature");
+      setForm(emptyForm);
       setOpen(false);
       load();
     } catch (error) {
@@ -142,6 +142,19 @@ export default function ContratsPage() {
     }
   }
 
+  async function handleSignature(blob: Blob) {
+    if (!signingContrat) return;
+    const fd = new FormData();
+    fd.append("file", blob, "signature.png");
+    const endpoint = signingContrat.role === "bailleur"
+      ? `/api/contrats/${signingContrat.contrat.id}/signer-bailleur`
+      : `/api/contrats/${signingContrat.contrat.id}/signer-locataire`;
+    await api.post(endpoint, fd, { headers: { "Content-Type": "multipart/form-data" } });
+    toast.success("Signature enregistrée");
+    setSigningContrat(null);
+    load();
+  }
+
   const filteredContrats = contrats?.filter((c) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
@@ -149,104 +162,65 @@ export default function ContratsPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Contrats</h1>
-          <p className="text-sm text-muted-foreground">Création, archivage et téléchargement des contrats.</p>
+          <p className="text-sm text-muted-foreground">Création, signature et téléchargement des contrats de bail.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger render={<Button disabled={logements.length === 0 || locataires.length === 0} />}>
             <Plus className="mr-1 h-4 w-4" /> Nouveau contrat
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Créer un contrat</DialogTitle>
+              <DialogTitle>Créer un contrat de bail</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Logement</Label>
-                <Select
-                  value={form.logement_id}
-                  onValueChange={handleLogementChange}
-                  items={logements.map((l) => ({ value: String(l.id), label: l.nom }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choisir un logement" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {logements.map((l) => (
-                      <SelectItem key={l.id} value={String(l.id)}>
-                        {l.nom}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+              <div className="space-y-1.5">
+                <Label>Logement *</Label>
+                <Select value={form.logement_id} onValueChange={handleLogementChange}
+                  items={logements.map((l) => ({ value: String(l.id), label: l.nom }))}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Choisir un logement" /></SelectTrigger>
+                  <SelectContent>{logements.map((l) => <SelectItem key={l.id} value={String(l.id)}>{l.nom}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Locataire</Label>
-                <Select
-                  value={form.locataire_id}
-                  onValueChange={(v) => setForm({ ...form, locataire_id: v ?? "" })}
-                  items={locataires.map((l) => ({ value: String(l.id), label: `${l.prenom} ${l.nom}` }))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Choisir un locataire" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locataires.map((l) => (
-                      <SelectItem key={l.id} value={String(l.id)}>
-                        {l.prenom} {l.nom}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
+              <div className="space-y-1.5">
+                <Label>Locataire *</Label>
+                <Select value={form.locataire_id} onValueChange={(v) => setForm({ ...form, locataire_id: v ?? "" })}
+                  items={locataires.map((l) => ({ value: String(l.id), label: `${l.prenom} ${l.nom}` }))}>
+                  <SelectTrigger className="w-full"><SelectValue placeholder="Choisir un locataire" /></SelectTrigger>
+                  <SelectContent>{locataires.map((l) => <SelectItem key={l.id} value={String(l.id)}>{l.prenom} {l.nom}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date_debut">Date de début</Label>
-                  <Input
-                    id="date_debut"
-                    type="date"
-                    required
-                    value={form.date_debut}
-                    onChange={(e) => setForm({ ...form, date_debut: e.target.value })}
-                  />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="date_debut">Date de début *</Label>
+                  <Input id="date_debut" type="date" required value={form.date_debut} onChange={(e) => setForm({ ...form, date_debut: e.target.value })} />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="jour_paiement">Jour de paiement</Label>
-                  <Input
-                    id="jour_paiement"
-                    type="number"
-                    min={1}
-                    max={28}
-                    required
-                    value={form.jour_paiement}
-                    onChange={(e) => setForm({ ...form, jour_paiement: e.target.value })}
-                  />
+                <div className="space-y-1.5">
+                  <Label htmlFor="duree">Durée (mois)</Label>
+                  <Input id="duree" type="number" min={1} value={form.duree_mois} onChange={(e) => setForm({ ...form, duree_mois: e.target.value })} placeholder="12" />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="loyer">Loyer mensuel (FCFA)</Label>
-                  <Input
-                    id="loyer"
-                    type="number"
-                    min={0}
-                    required
-                    value={form.loyer_mensuel}
-                    onChange={(e) => setForm({ ...form, loyer_mensuel: e.target.value })}
-                  />
+                <div className="space-y-1.5">
+                  <Label htmlFor="loyer">Loyer mensuel (FCFA) *</Label>
+                  <Input id="loyer" type="number" min={0} required value={form.loyer_mensuel} onChange={(e) => setForm({ ...form, loyer_mensuel: e.target.value })} />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <Label htmlFor="depot">Dépôt de garantie</Label>
-                  <Input
-                    id="depot"
-                    type="number"
-                    min={0}
-                    value={form.depot_garantie}
-                    onChange={(e) => setForm({ ...form, depot_garantie: e.target.value })}
-                  />
+                  <Input id="depot" type="number" min={0} value={form.depot_garantie} onChange={(e) => setForm({ ...form, depot_garantie: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="jour">Jour de paiement</Label>
+                  <Input id="jour" type="number" min={1} max={28} value={form.jour_paiement} onChange={(e) => setForm({ ...form, jour_paiement: e.target.value })} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lieu">Ville de signature</Label>
+                  <Input id="lieu" value={form.lieu_signature} onChange={(e) => setForm({ ...form, lieu_signature: e.target.value })} placeholder="Douala" />
+                </div>
+                <div className="space-y-1.5 col-span-2">
+                  <Label htmlFor="juridiction">Élection de domicile (juridiction)</Label>
+                  <Input id="juridiction" value={form.juridiction} onChange={(e) => setForm({ ...form, juridiction: e.target.value })} placeholder="Douala" />
                 </div>
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
@@ -257,6 +231,23 @@ export default function ContratsPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Signature dialog */}
+      <Dialog open={!!signingContrat} onOpenChange={(v) => !v && setSigningContrat(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Signature {signingContrat?.role === "bailleur" ? "du bailleur" : "du locataire"}
+            </DialogTitle>
+          </DialogHeader>
+          {signingContrat && (
+            <SignatureCanvas
+              onSave={handleSignature}
+              onCancel={() => setSigningContrat(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!archiving} onOpenChange={(v) => !v && setArchiving(null)}>
         <AlertDialogContent>
@@ -285,62 +276,77 @@ export default function ContratsPage() {
         </Card>
       ) : (
         <>
-        <div className="relative max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un logement ou un locataire..."
-            className="pl-9"
-          />
-        </div>
-        <Card className="overflow-hidden p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Logement</TableHead>
-                <TableHead>Locataire</TableHead>
-                <TableHead>Début</TableHead>
-                <TableHead>Loyer</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredContrats?.map((contrat) => (
-                <TableRow key={contrat.id}>
-                  <TableCell className="font-medium">{logementName(contrat.logement_id)}</TableCell>
-                  <TableCell>{locataireName(contrat.locataire_id)}</TableCell>
-                  <TableCell>{contrat.date_debut}</TableCell>
-                  <TableCell>{new Intl.NumberFormat("fr-FR").format(contrat.loyer_mensuel)} FCFA</TableCell>
-                  <TableCell className="flex items-center gap-2">
-                    <Badge variant={contrat.statut === "ACTIF" ? "default" : "secondary"}>
-                      {statutLabels[contrat.statut]}
-                    </Badge>
-                    {contrat.en_retard && <Badge variant="destructive">En retard</Badge>}
-                  </TableCell>
-                  <TableCell className="flex justify-end gap-2">
-                    {contrat.pdf_path && (
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        title="Télécharger le PDF"
-                        onClick={() => downloadWithAuth(`/api/contrats/${contrat.id}/pdf`, `contrat_${contrat.id}.pdf`)}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {contrat.statut === "ACTIF" && (
-                      <Button variant="outline" size="icon" onClick={() => setArchiving(contrat)} title="Archiver">
-                        <Archive className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
+          <div className="relative max-w-sm">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)}
+              placeholder="Rechercher un logement ou locataire..." className="pl-9" />
+          </div>
+          <Card className="overflow-hidden p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Logement</TableHead>
+                  <TableHead>Locataire</TableHead>
+                  <TableHead>Début</TableHead>
+                  <TableHead>Loyer</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Signatures</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+              </TableHeader>
+              <TableBody>
+                {filteredContrats?.map((contrat) => {
+                  const cfg = statutConfig[contrat.statut];
+                  return (
+                    <TableRow key={contrat.id} className={contrat.statut === "EN_ATTENTE_SIGNATURE" ? "bg-yellow-50/40 dark:bg-yellow-900/10" : ""}>
+                      <TableCell className="font-medium">{logementName(contrat.logement_id)}</TableCell>
+                      <TableCell>{locataireName(contrat.locataire_id)}</TableCell>
+                      <TableCell className="text-sm">{contrat.date_debut}</TableCell>
+                      <TableCell className="text-sm">{new Intl.NumberFormat("fr-FR").format(contrat.loyer_mensuel)} F</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant={cfg.variant}>{cfg.label}</Badge>
+                          {contrat.en_retard && <Badge variant="destructive">Retard</Badge>}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2 text-xs">
+                          <span className={contrat.signature_bailleur_url ? "text-green-600 dark:text-green-400 flex items-center gap-0.5" : "text-muted-foreground"}>
+                            {contrat.signature_bailleur_url ? <CheckCircle2 className="h-3 w-3" /> : "○"} Bailleur
+                          </span>
+                          <span className={contrat.signature_locataire_url ? "text-green-600 dark:text-green-400 flex items-center gap-0.5" : "text-muted-foreground"}>
+                            {contrat.signature_locataire_url ? <CheckCircle2 className="h-3 w-3" /> : "○"} Locataire
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex justify-end gap-1">
+                          {/* Sign as bailleur if not yet signed */}
+                          {!contrat.signature_bailleur_url && (
+                            <Button variant="outline" size="sm" className="h-7 px-2 text-xs"
+                              onClick={() => setSigningContrat({ contrat, role: "bailleur" })}
+                              title="Signer en tant que bailleur">
+                              <PenLine className="mr-1 h-3 w-3" /> Signer
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon"
+                            onClick={() => downloadWithAuth(`/api/contrats/${contrat.id}/pdf`, `contrat_${contrat.id}.pdf`)}
+                            title="Télécharger le PDF">
+                            <Download className="h-4 w-4" />
+                          </Button>
+                          {(contrat.statut === "ACTIF" || contrat.statut === "EN_ATTENTE_SIGNATURE") && (
+                            <Button variant="ghost" size="icon" onClick={() => setArchiving(contrat)} title="Archiver">
+                              <Archive className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </Card>
         </>
       )}
     </div>
@@ -351,10 +357,10 @@ async function downloadWithAuth(path: string, filename: string) {
   try {
     const res = await api.get(path, { responseType: "blob" });
     const url = window.URL.createObjectURL(res.data);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
     window.URL.revokeObjectURL(url);
   } catch {
     toast.error("Impossible de télécharger le document");

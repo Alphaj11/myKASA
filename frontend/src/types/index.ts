@@ -16,6 +16,8 @@ export interface User {
   adresse: string | null;
   cni_numero: string | null;
   cni_url: string | null;
+  cni_date_delivrance: string | null;
+  cni_lieu_delivrance: string | null;
 }
 
 export interface Immeuble {
@@ -70,10 +72,14 @@ export interface Locataire {
   photo_url: string | null;
   profession: string | null;
   employeur: string | null;
+  lieu_naissance: string | null;
+  nationalite: string | null;
+  statut_matrimonial: string | null;
+  nb_enfants: number | null;
   created_at: string;
 }
 
-export type StatutContrat = "ACTIF" | "ARCHIVE" | "RESILIE";
+export type StatutContrat = "EN_ATTENTE_SIGNATURE" | "ACTIF" | "ARCHIVE" | "RESILIE";
 
 export interface Contrat {
   id: number;
@@ -85,8 +91,13 @@ export interface Contrat {
   loyer_mensuel: number;
   jour_paiement: number;
   depot_garantie: number | null;
+  duree_mois: number | null;
+  lieu_signature: string | null;
+  juridiction: string | null;
   statut: StatutContrat;
   pdf_path: string | null;
+  signature_bailleur_url: string | null;
+  signature_locataire_url: string | null;
   created_at: string;
   en_retard: boolean;
 }
@@ -158,6 +169,7 @@ export interface MonContrat {
   depot_garantie: number | null;
   statut: StatutContrat;
   pdf_path: string | null;
+  signature_locataire_url: string | null;
   created_at: string;
   en_retard: boolean;
 }

@@ -128,6 +128,8 @@ def update_profile(
     current_user.date_naissance = payload.date_naissance
     current_user.adresse = payload.adresse
     current_user.cni_numero = payload.cni_numero
+    current_user.cni_date_delivrance = payload.cni_date_delivrance
+    current_user.cni_lieu_delivrance = payload.cni_lieu_delivrance
     db.commit()
     db.refresh(current_user)
     return current_user

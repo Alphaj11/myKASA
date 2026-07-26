@@ -14,6 +14,10 @@ class LocataireBase(BaseModel):
     cni_numero: str | None = None
     profession: str | None = None
     employeur: str | None = None
+    lieu_naissance: str | None = None
+    nationalite: str | None = None
+    statut_matrimonial: str | None = None
+    nb_enfants: int | None = None
 
 
 class LocataireCreate(LocataireBase):
@@ -32,6 +36,10 @@ class LocataireUpdate(BaseModel):
     cni_numero: str | None = None
     profession: str | None = None
     employeur: str | None = None
+    lieu_naissance: str | None = None
+    nationalite: str | None = None
+    statut_matrimonial: str | None = None
+    nb_enfants: int | None = None
 
 
 class LocataireRead(LocataireBase):
@@ -42,3 +50,7 @@ class LocataireRead(LocataireBase):
     logement_id: int | None
     photo_url: str | None = None
     created_at: datetime
+    lieu_naissance: str | None = None
+    nationalite: str | None = None
+    statut_matrimonial: str | None = None
+    nb_enfants: int | None = None

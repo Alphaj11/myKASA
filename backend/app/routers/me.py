@@ -71,6 +71,7 @@ def mes_contrats(
                 depot_garantie=contrat.depot_garantie,
                 statut=contrat.statut,
                 pdf_path=contrat.pdf_path,
+                signature_locataire_url=contrat.signature_locataire_url,
                 created_at=contrat.created_at,
                 en_retard=est_en_retard(db, contrat),
             )

@@ -13,6 +13,9 @@ class ContratBase(BaseModel):
     loyer_mensuel: float
     jour_paiement: int = 1
     depot_garantie: float | None = None
+    duree_mois: int | None = None
+    lieu_signature: str | None = None
+    juridiction: str | None = None
 
 
 class ContratCreate(ContratBase):
@@ -22,6 +25,9 @@ class ContratCreate(ContratBase):
 class ContratUpdate(BaseModel):
     date_fin: date | None = None
     statut: StatutContrat | None = None
+    duree_mois: int | None = None
+    lieu_signature: str | None = None
+    juridiction: str | None = None
 
 
 class ContratRead(ContratBase):
@@ -31,5 +37,7 @@ class ContratRead(ContratBase):
     bailleur_id: int
     statut: StatutContrat
     pdf_path: str | None
+    signature_bailleur_url: str | None = None
+    signature_locataire_url: str | None = None
     created_at: datetime
     en_retard: bool = False

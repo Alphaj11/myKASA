@@ -1,6 +1,6 @@
 import os
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from app.models.locataire import Locataire
 from app.models.logement import Logement, StatutLogement
 from app.models.user import User, UserRole
 from app.schemas.contrat import ContratCreate, ContratRead, ContratUpdate
+from app.services.images import save_image
 from app.services.pdf import STORAGE_ROOT, generate_contrat_pdf
 from app.services.stats import est_en_retard
 
@@ -41,7 +42,8 @@ def create_contrat(
     if not locataire or locataire.bailleur_id != current_user.id:
         raise HTTPException(status_code=404, detail="Locataire introuvable")
 
-    contrat = Contrat(**payload.model_dump(), bailleur_id=current_user.id)
+    contrat = Contrat(**payload.model_dump(), bailleur_id=current_user.id,
+                      statut=StatutContrat.EN_ATTENTE_SIGNATURE)
     db.add(contrat)
     logement.statut = StatutLogement.OCCUPE
     locataire.logement_id = logement.id
@@ -105,7 +107,57 @@ def update_contrat(
 @router.get("/{contrat_id}/pdf")
 def download_contrat_pdf(contrat_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     contrat = _get_viewable_contrat(db, contrat_id, current_user)
-    if not contrat.pdf_path:
-        raise HTTPException(status_code=404, detail="PDF non disponible")
+    # Regenerate to include latest signatures
+    logement = contrat.logement
+    locataire = contrat.locataire
+    bailleur = db.get(User, contrat.bailleur_id)
+    contrat.pdf_path = generate_contrat_pdf(contrat, logement, locataire, bailleur)
+    db.commit()
     full_path = os.path.join(STORAGE_ROOT, contrat.pdf_path)
     return FileResponse(full_path, filename=f"contrat_{contrat.id}.pdf", media_type="application/pdf")
+
+
+@router.post("/{contrat_id}/signer-bailleur")
+async def signer_bailleur(
+    contrat_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    contrat = _get_owned_contrat(db, contrat_id, current_user)
+    content = await file.read()
+    url = save_image("signatures", file, content)
+    contrat.signature_bailleur_url = url
+    # If locataire already signed → activate contract
+    if contrat.signature_locataire_url:
+        contrat.statut = StatutContrat.ACTIF
+    db.commit()
+    return {"signature_bailleur_url": url, "statut": contrat.statut}
+
+
+@router.post("/{contrat_id}/signer-locataire")
+async def signer_locataire(
+    contrat_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    contrat = db.get(Contrat, contrat_id)
+    if not contrat:
+        raise HTTPException(status_code=404, detail="Contrat introuvable")
+    # Allow bailleur owner OR the linked locataire user
+    is_bailleur = contrat.bailleur_id == current_user.id
+    is_locataire = (
+        current_user.role == UserRole.LOCATAIRE
+        and contrat.locataire.utilisateur_id == current_user.id
+    )
+    if not is_bailleur and not is_locataire and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="Accès refusé")
+    content = await file.read()
+    url = save_image("signatures", file, content)
+    contrat.signature_locataire_url = url
+    # If bailleur already signed → activate contract
+    if contrat.signature_bailleur_url:
+        contrat.statut = StatutContrat.ACTIF
+    db.commit()
+    return {"signature_locataire_url": url, "statut": contrat.statut}

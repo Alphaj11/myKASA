@@ -30,6 +30,7 @@ class MonContrat(BaseModel):
     depot_garantie: float | None
     statut: StatutContrat
     pdf_path: str | None
+    signature_locataire_url: str | None = None
     created_at: datetime
     en_retard: bool = False
 

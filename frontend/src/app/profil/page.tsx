@@ -22,6 +22,8 @@ export default function ProfilPage() {
   const [dateNaissance, setDateNaissance] = useState("");
   const [adresse, setAdresse] = useState("");
   const [cniNumero, setCniNumero] = useState("");
+  const [cniDateDelivrance, setCniDateDelivrance] = useState("");
+  const [cniLieuDelivrance, setCniLieuDelivrance] = useState("");
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -36,6 +38,8 @@ export default function ProfilPage() {
       setDateNaissance(user.date_naissance ?? "");
       setAdresse(user.adresse ?? "");
       setCniNumero(user.cni_numero ?? "");
+      setCniDateDelivrance(user.cni_date_delivrance ?? "");
+      setCniLieuDelivrance(user.cni_lieu_delivrance ?? "");
     }
   }, [user]);
 
@@ -69,6 +73,8 @@ export default function ProfilPage() {
         date_naissance: dateNaissance || null,
         adresse: adresse || null,
         cni_numero: cniNumero || null,
+        cni_date_delivrance: cniDateDelivrance || null,
+        cni_lieu_delivrance: cniLieuDelivrance || null,
       });
       await refreshUser();
       toast.success("Profil mis à jour");
@@ -234,6 +240,14 @@ export default function ProfilPage() {
             <div className="space-y-1.5">
               <Label htmlFor="cni">N° CNI / Passeport</Label>
               <Input id="cni" value={cniNumero} onChange={(e) => setCniNumero(e.target.value)} placeholder="123456789" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cni_date">Date de délivrance CNI</Label>
+              <Input id="cni_date" type="date" value={cniDateDelivrance} onChange={(e) => setCniDateDelivrance(e.target.value)} />
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label htmlFor="cni_lieu">Lieu de délivrance CNI</Label>
+              <Input id="cni_lieu" value={cniLieuDelivrance} onChange={(e) => setCniLieuDelivrance(e.target.value)} placeholder="Yaoundé, préfecture de..." />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="adresse">Adresse</Label>

@@ -30,6 +30,8 @@ class UserRead(UserBase):
     adresse: str | None = None
     cni_numero: str | None = None
     cni_url: str | None = None
+    cni_date_delivrance: date | None = None
+    cni_lieu_delivrance: str | None = None
 
 
 class UserUpdatePlan(BaseModel):
@@ -46,6 +48,8 @@ class UpdateProfileRequest(BaseModel):
     date_naissance: date | None = None
     adresse: str | None = None
     cni_numero: str | None = None
+    cni_date_delivrance: date | None = None
+    cni_lieu_delivrance: str | None = None
 
 
 class ChangePasswordRequest(BaseModel):

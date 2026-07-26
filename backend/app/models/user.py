@@ -39,6 +39,8 @@ class User(Base):
     adresse: Mapped[str | None] = mapped_column(String(500), nullable=True)
     cni_numero: Mapped[str | None] = mapped_column(String(100), nullable=True)
     cni_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    cni_date_delivrance: Mapped[date | None] = mapped_column(Date, nullable=True)
+    cni_lieu_delivrance: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     immeubles = relationship("Immeuble", back_populates="bailleur", cascade="all, delete-orphan")
     locataire_profile = relationship(

@@ -39,6 +39,7 @@ import type { Locataire, Logement } from "@/types";
 const emptyForm = {
   nom: "", prenom: "", email: "", telephone: "", logement_id: "",
   date_naissance: "", adresse: "", cni_numero: "", profession: "", employeur: "",
+  lieu_naissance: "", nationalite: "", statut_matrimonial: "", nb_enfants: "",
 };
 
 function DocumentButton({ locataire, onUploaded }: { locataire: Locataire; onUploaded: () => void }) {
@@ -167,6 +168,8 @@ export default function LocatairesPage() {
       date_naissance: loc.date_naissance ?? "", adresse: loc.adresse ?? "",
       cni_numero: loc.cni_numero ?? "", profession: loc.profession ?? "",
       employeur: loc.employeur ?? "",
+      lieu_naissance: loc.lieu_naissance ?? "", nationalite: loc.nationalite ?? "",
+      statut_matrimonial: loc.statut_matrimonial ?? "", nb_enfants: loc.nb_enfants != null ? String(loc.nb_enfants) : "",
     });
     setOpen(true);
   }
@@ -181,6 +184,10 @@ export default function LocatairesPage() {
       date_naissance: form.date_naissance || null,
       adresse: form.adresse || null, cni_numero: form.cni_numero || null,
       profession: form.profession || null, employeur: form.employeur || null,
+      lieu_naissance: form.lieu_naissance || null,
+      nationalite: form.nationalite || null,
+      statut_matrimonial: form.statut_matrimonial || null,
+      nb_enfants: form.nb_enfants ? Number(form.nb_enfants) : null,
     };
     try {
       if (editing) {
@@ -272,6 +279,22 @@ export default function LocatairesPage() {
                 <div className="space-y-1.5">
                   <Label htmlFor="employeur">Employeur</Label>
                   <Input id="employeur" value={form.employeur} onChange={(e) => setForm({ ...form, employeur: e.target.value })} placeholder="Société XYZ" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="lieu_naissance">Lieu de naissance</Label>
+                  <Input id="lieu_naissance" value={form.lieu_naissance} onChange={(e) => setForm({ ...form, lieu_naissance: e.target.value })} placeholder="Douala" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="nationalite">Nationalité</Label>
+                  <Input id="nationalite" value={form.nationalite} onChange={(e) => setForm({ ...form, nationalite: e.target.value })} placeholder="Camerounaise" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="statut_matrimonial">Statut matrimonial</Label>
+                  <Input id="statut_matrimonial" value={form.statut_matrimonial} onChange={(e) => setForm({ ...form, statut_matrimonial: e.target.value })} placeholder="Célibataire, Marié(e)..." />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="nb_enfants">Nombre d&apos;enfants</Label>
+                  <Input id="nb_enfants" type="number" min="0" value={form.nb_enfants} onChange={(e) => setForm({ ...form, nb_enfants: e.target.value })} placeholder="0" />
                 </div>
               </div>
               <div className="space-y-1.5">
