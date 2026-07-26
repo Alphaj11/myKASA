@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -26,18 +25,42 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, apiErrorMessage, imgUrl } from "@/lib/api";
 import type { Immeuble } from "@/types";
 
-const TYPES_BIEN = ["Résidentiel", "Commercial", "Mixte", "Industriel", "Terrain"];
+const TYPES_PROPRIETE = [
+  {
+    value: "Immeuble",
+    icon: "🏢",
+    description: "Bâtiment multi-étages avec appartements, studios ou bureaux",
+  },
+  {
+    value: "Résidence",
+    icon: "🏘️",
+    description: "Complexe regroupant plusieurs logements sur un même terrain",
+  },
+  {
+    value: "Maison",
+    icon: "🏠",
+    description: "Habitation individuelle, louée en entier ou par chambres",
+  },
+  {
+    value: "Villa",
+    icon: "🏡",
+    description: "Maison de standing avec jardin ou espace extérieur",
+  },
+  {
+    value: "Local commercial",
+    icon: "🏪",
+    description: "Boutique, bureau, showroom ou espace de restauration",
+  },
+  {
+    value: "Entrepôt",
+    icon: "🏭",
+    description: "Stockage, atelier ou activité industrielle / logistique",
+  },
+];
 
 const DECLARATION_TEXT = `Je déclare sur l'honneur être propriétaire du bien immobilier enregistré sur cette plateforme ou être légalement autorisé à en assurer la gestion et la location.
 
@@ -141,6 +164,10 @@ export default function ImmeublesPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!form.type_bien) {
+      toast.error("Veuillez choisir un type de propriété");
+      return;
+    }
     if (!editing && !form.declaration_acceptee) {
       toast.error("Vous devez accepter la déclaration sur l'honneur");
       return;
@@ -151,7 +178,7 @@ export default function ImmeublesPage() {
       adresse: form.adresse,
       ville: form.ville,
       description: form.description || null,
-      type_bien: form.type_bien || null,
+      type_bien: form.type_bien,
       superficie_totale: form.superficie_totale ? Number(form.superficie_totale) : null,
       annee_construction: form.annee_construction ? Number(form.annee_construction) : null,
       ...(editing ? {} : { declaration_acceptee: form.declaration_acceptee }),
@@ -159,10 +186,10 @@ export default function ImmeublesPage() {
     try {
       if (editing) {
         await api.patch(`/api/immeubles/${editing.id}`, payload);
-        toast.success("Immeuble mis à jour");
+        toast.success("Propriété mise à jour");
       } else {
         await api.post("/api/immeubles", payload);
-        toast.success("Immeuble ajouté");
+        toast.success("Propriété ajoutée");
       }
       setOpen(false);
       load();
@@ -178,7 +205,7 @@ export default function ImmeublesPage() {
     setIsDeleting(true);
     try {
       await api.delete(`/api/immeubles/${deleting.id}`);
-      toast.success("Immeuble supprimé");
+      toast.success("Propriété supprimée");
       setDeleting(null);
       load();
     } catch (error) {
@@ -192,8 +219,8 @@ export default function ImmeublesPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Immeubles</h1>
-          <p className="text-sm text-muted-foreground">Gérez vos biens immobiliers et leur statut.</p>
+          <h1 className="text-2xl font-bold">Propriétés</h1>
+          <p className="text-sm text-muted-foreground">Gérez vos biens immobiliers et leurs unités.</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger render={<Button onClick={openCreate} />}>
@@ -201,12 +228,39 @@ export default function ImmeublesPage() {
           </DialogTrigger>
           <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editing ? "Modifier l'immeuble" : "Nouvel immeuble"}</DialogTitle>
+              <DialogTitle>{editing ? "Modifier la propriété" : "Nouvelle propriété"}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
+
+              {/* Type selector */}
+              <div className="space-y-2">
+                <Label>Type de propriété *</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {TYPES_PROPRIETE.map((t) => {
+                    const selected = form.type_bien === t.value;
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setForm({ ...form, type_bien: t.value })}
+                        className={`flex flex-col items-start gap-1 rounded-lg border p-3 text-left transition-colors hover:border-primary/60 ${
+                          selected
+                            ? "border-primary bg-primary/5 ring-1 ring-primary"
+                            : "border-input bg-background"
+                        }`}
+                      >
+                        <span className="text-xl leading-none">{t.icon}</span>
+                        <span className="text-xs font-semibold leading-tight">{t.value}</span>
+                        <span className="text-[10px] leading-snug text-muted-foreground">{t.description}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5 col-span-2">
-                  <Label htmlFor="nom">Nom du bien *</Label>
+                  <Label htmlFor="nom">Nom de la propriété *</Label>
                   <Input id="nom" required value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} placeholder="Résidence Bonapriso" />
                 </div>
                 <div className="space-y-1.5">
@@ -214,27 +268,12 @@ export default function ImmeublesPage() {
                   <Input id="ville" required value={form.ville} onChange={(e) => setForm({ ...form, ville: e.target.value })} placeholder="Douala" />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Type de bien</Label>
-                  <Select
-                    value={form.type_bien}
-                    onValueChange={(v) => setForm({ ...form, type_bien: v ?? "" })}
-                    items={TYPES_BIEN.map((t) => ({ value: t, label: t }))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Choisir..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TYPES_BIEN.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="superficie">Superficie (m²)</Label>
+                  <Input id="superficie" type="number" min={0} value={form.superficie_totale} onChange={(e) => setForm({ ...form, superficie_totale: e.target.value })} placeholder="500" />
                 </div>
                 <div className="space-y-1.5 col-span-2">
                   <Label htmlFor="adresse">Adresse *</Label>
                   <Input id="adresse" required value={form.adresse} onChange={(e) => setForm({ ...form, adresse: e.target.value })} placeholder="Rue 1234, Quartier..." />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="superficie">Superficie totale (m²)</Label>
-                  <Input id="superficie" type="number" min={0} value={form.superficie_totale} onChange={(e) => setForm({ ...form, superficie_totale: e.target.value })} placeholder="500" />
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="annee">Année de construction</Label>
@@ -247,7 +286,7 @@ export default function ImmeublesPage() {
                     rows={3}
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
-                    placeholder="Immeuble R+4, gardien, parking..."
+                    placeholder="R+4, gardien, parking, clôture..."
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring resize-none"
                   />
                 </div>
@@ -272,9 +311,9 @@ export default function ImmeublesPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full" disabled={isSubmitting || (!editing && !form.declaration_acceptee)}>
+              <Button type="submit" className="w-full" disabled={isSubmitting || !form.type_bien || (!editing && !form.declaration_acceptee)}>
                 {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {editing ? "Enregistrer les modifications" : "Enregistrer le bien"}
+                {editing ? "Enregistrer les modifications" : "Enregistrer la propriété"}
               </Button>
             </form>
           </DialogContent>
@@ -307,8 +346,8 @@ export default function ImmeublesPage() {
         <Card className="flex flex-col items-center gap-3 p-12 text-center text-muted-foreground">
           <Building2 className="h-10 w-10 opacity-40" />
           <div>
-            <p className="font-medium">Aucun bien immobilier</p>
-            <p className="text-sm">Ajoutez votre premier immeuble pour commencer.</p>
+            <p className="font-medium">Aucune propriété enregistrée</p>
+            <p className="text-sm">Ajoutez votre première propriété pour commencer.</p>
           </div>
         </Card>
       ) : (
@@ -316,6 +355,7 @@ export default function ImmeublesPage() {
           {immeubles.map((immeuble, i) => {
             const badge = verificationBadge(immeuble.verification_level);
             const photo = imgUrl(immeuble.photo_principale_url);
+            const typeInfo = TYPES_PROPRIETE.find((t) => t.value === immeuble.type_bien);
             return (
               <motion.div key={immeuble.id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
                 <Card className="overflow-hidden p-0">
@@ -323,8 +363,9 @@ export default function ImmeublesPage() {
                     {photo ? (
                       <img src={photo} alt={immeuble.nom} className="h-full w-full object-cover" />
                     ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <Building2 className="h-12 w-12 text-muted-foreground/30" />
+                      <div className="flex h-full flex-col items-center justify-center gap-1">
+                        <span className="text-4xl leading-none">{typeInfo?.icon ?? "🏢"}</span>
+                        <span className="text-xs text-muted-foreground">{immeuble.type_bien ?? "Propriété"}</span>
                       </div>
                     )}
                     <PhotoButton immeuble={immeuble} onUploaded={load} />
@@ -349,7 +390,7 @@ export default function ImmeublesPage() {
                       <p className="mt-1.5 text-xs text-muted-foreground line-clamp-2">{immeuble.description}</p>
                     )}
                     <div className="mt-3 flex items-center justify-between">
-                      <span className="text-xs font-medium text-primary">{immeuble.nb_logements} logement(s)</span>
+                      <span className="text-xs font-medium text-primary">{immeuble.nb_logements} unité(s)</span>
                       <div className="flex gap-3 text-xs text-muted-foreground">
                         {immeuble.superficie_totale && <span>{immeuble.superficie_totale} m²</span>}
                         {immeuble.annee_construction && <span>{immeuble.annee_construction}</span>}

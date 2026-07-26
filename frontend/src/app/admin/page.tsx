@@ -30,7 +30,7 @@ export default function AdminDashboardPage() {
     ? [
         { label: "Bailleurs", value: stats.nb_bailleurs, icon: Users },
         { label: "Locataires", value: stats.nb_locataires, icon: Users },
-        { label: "Immeubles", value: stats.nb_immeubles, icon: Building2 },
+        { label: "Propriétés", value: stats.nb_immeubles, icon: Building2 },
         { label: "Logements", value: stats.nb_logements, icon: Home },
         { label: "Contrats actifs", value: stats.nb_contrats_actifs, icon: FileText },
         { label: "Volume payé ce mois", value: formatFCFA(stats.volume_paiements_mois), icon: Wallet },

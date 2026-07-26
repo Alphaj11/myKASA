@@ -28,7 +28,7 @@ const features = [
   {
     icon: Building2,
     title: "Gestion des biens",
-    description: "Immeubles, logements et disponibilité centralisés en un seul endroit.",
+    description: "Propriétés, logements et disponibilité centralisés en un seul endroit.",
   },
   {
     icon: FileText,
@@ -82,7 +82,7 @@ const plans = [
     tagline: "Pour les professionnels",
     features: [
       "Plusieurs propriétaires",
-      "Plusieurs immeubles",
+      "Plusieurs propriétés",
       "Plusieurs gestionnaires",
     ],
   },
@@ -141,7 +141,7 @@ export default function LandingPage() {
             </h1>
             <p className="mt-5 max-w-lg text-lg text-muted-foreground">
               Fini les cahiers, les reçus papier et les échanges WhatsApp. LocalTrack centralise
-              vos immeubles, contrats, paiements et quittances dans un espace numérique sécurisé.
+              vos propriétés, contrats, paiements et quittances dans un espace numérique sécurisé.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
               <Button size="lg" nativeButton={false} render={<Link href="/register" />}>
