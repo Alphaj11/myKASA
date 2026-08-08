@@ -282,6 +282,7 @@ export default function ContratsPage() {
               placeholder="Rechercher un logement ou locataire..." className="pl-9" />
           </div>
           <Card className="overflow-hidden p-0">
+            <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -346,6 +347,7 @@ export default function ContratsPage() {
                 })}
               </TableBody>
             </Table>
+            </div>
           </Card>
         </>
       )}

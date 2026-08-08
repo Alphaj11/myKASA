@@ -5,12 +5,37 @@ from app.core.security import get_current_user, require_roles
 from app.db.session import get_db
 from app.models.contrat import Contrat
 from app.models.immeuble import Immeuble
-from app.models.logement import Logement
+from app.models.logement import Logement, TypeLogement
 from app.models.user import User, UserRole
 from app.schemas.logement import LogementCreate, LogementRead, LogementUpdate
 from app.services.images import delete_image, save_image
 
+TYPES_COMPATIBLES: dict[str, list[TypeLogement]] = {
+    "Immeuble":         [TypeLogement.STUDIO, TypeLogement.APPARTEMENT, TypeLogement.CHAMBRE],
+    "Résidence":        [TypeLogement.VILLA, TypeLogement.MAISON, TypeLogement.APPARTEMENT, TypeLogement.STUDIO, TypeLogement.CHAMBRE],
+    "Maison":           [TypeLogement.CHAMBRE],
+    "Villa":            [TypeLogement.CHAMBRE],
+    "Local commercial": [TypeLogement.BUREAU],
+    "Entrepôt":         [TypeLogement.BUREAU],
+}
+
 router = APIRouter(prefix="/api/logements", tags=["logements"])
+
+
+def _validate_against_immeuble(immeuble: Immeuble, logement_type: TypeLogement, superficie: float | None) -> None:
+    if immeuble.type_bien and immeuble.type_bien in TYPES_COMPATIBLES:
+        allowed = TYPES_COMPATIBLES[immeuble.type_bien]
+        if logement_type not in allowed:
+            labels = ", ".join(t.value.capitalize() for t in allowed)
+            raise HTTPException(
+                status_code=422,
+                detail=f"Un(e) {immeuble.type_bien} ne peut contenir que : {labels}",
+            )
+    if superficie and immeuble.superficie_totale and superficie > immeuble.superficie_totale:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Superficie trop grande — la propriété fait {immeuble.superficie_totale} m² au total",
+        )
 
 
 def _assert_immeuble_owned(db: Session, immeuble_id: int, current_user: User) -> Immeuble:
@@ -42,7 +67,8 @@ def create_logement(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.BAILLEUR)),
 ):
-    _assert_immeuble_owned(db, payload.immeuble_id, current_user)
+    immeuble = _assert_immeuble_owned(db, payload.immeuble_id, current_user)
+    _validate_against_immeuble(immeuble, payload.type, payload.superficie)
     logement = Logement(**payload.model_dump())
     db.add(logement)
     db.commit()
@@ -71,7 +97,12 @@ def update_logement(
     current_user: User = Depends(get_current_user),
 ):
     logement = _get_owned_logement(db, logement_id, current_user)
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updated = payload.model_dump(exclude_unset=True)
+    new_type = updated.get("type", logement.type)
+    new_superficie = updated.get("superficie", logement.superficie)
+    immeuble = db.get(Immeuble, logement.immeuble_id)
+    _validate_against_immeuble(immeuble, new_type, new_superficie)
+    for field, value in updated.items():
         setattr(logement, field, value)
     db.commit()
     db.refresh(logement)

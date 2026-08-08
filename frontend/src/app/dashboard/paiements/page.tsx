@@ -252,6 +252,7 @@ export default function PaiementsPage() {
           />
         </div>
         <Card className="overflow-hidden p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -289,6 +290,7 @@ export default function PaiementsPage() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </Card>
         </>
       )}

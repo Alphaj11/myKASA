@@ -45,6 +45,18 @@ const typeLabels: Record<TypeLogement, string> = {
   BUREAU: "Bureau",
 };
 
+// Which logement types are allowed inside each property type
+const TYPES_COMPATIBLES: Record<string, TypeLogement[]> = {
+  "Immeuble":         ["STUDIO", "APPARTEMENT", "CHAMBRE"],
+  "Résidence":        ["VILLA", "MAISON", "APPARTEMENT", "STUDIO", "CHAMBRE"],
+  "Maison":           ["CHAMBRE"],
+  "Villa":            ["CHAMBRE"],
+  "Local commercial": ["BUREAU"],
+  "Entrepôt":         ["BUREAU"],
+};
+
+const ALL_TYPES = Object.keys(typeLabels) as TypeLogement[];
+
 const statutLabels: Record<StatutLogement, string> = {
   VACANT: "Vacant",
   OCCUPE: "Occupé",
@@ -126,6 +138,12 @@ export default function LogementsPage() {
     return immeubles.find((i) => i.id === id)?.nom ?? `Immeuble #${id}`;
   }
 
+  const selectedImmeuble = immeubles.find((i) => String(i.id) === form.immeuble_id);
+  const allowedTypes: TypeLogement[] = selectedImmeuble?.type_bien
+    ? (TYPES_COMPATIBLES[selectedImmeuble.type_bien] ?? ALL_TYPES)
+    : ALL_TYPES;
+  const isBureau = form.type === "BUREAU";
+
   const filteredLogements = logements?.filter((l) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
@@ -159,8 +177,14 @@ export default function LogementsPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!editing && !form.immeuble_id) {
-      toast.error("Sélectionnez un immeuble");
+      toast.error("Sélectionnez une propriété");
       return;
+    }
+    if (form.superficie && selectedImmeuble?.superficie_totale) {
+      if (Number(form.superficie) > selectedImmeuble.superficie_totale) {
+        toast.error(`Superficie trop grande — la propriété fait ${selectedImmeuble.superficie_totale} m² au total`);
+        return;
+      }
     }
     setIsSubmitting(true);
     const payload = {
@@ -171,8 +195,8 @@ export default function LogementsPage() {
       superficie: form.superficie ? Number(form.superficie) : null,
       etage: form.etage !== "" ? Number(form.etage) : null,
       nb_chambres: form.nb_chambres ? Number(form.nb_chambres) : null,
-      nb_salles_de_bain: form.nb_salles_de_bain ? Number(form.nb_salles_de_bain) : null,
-      meuble: form.meuble,
+      nb_salles_de_bain: isBureau ? null : (form.nb_salles_de_bain ? Number(form.nb_salles_de_bain) : null),
+      meuble: isBureau ? false : form.meuble,
       ...(editing ? { statut: form.statut } : { immeuble_id: Number(form.immeuble_id) }),
     };
     try {
@@ -228,7 +252,14 @@ export default function LogementsPage() {
                   <Label>Immeuble *</Label>
                   <Select
                     value={form.immeuble_id}
-                    onValueChange={(v) => setForm({ ...form, immeuble_id: v ?? "" })}
+                    onValueChange={(v) => {
+                      const newImmeuble = immeubles.find((i) => String(i.id) === v);
+                      const newAllowed: TypeLogement[] = newImmeuble?.type_bien
+                        ? (TYPES_COMPATIBLES[newImmeuble.type_bien] ?? ALL_TYPES)
+                        : ALL_TYPES;
+                      const typeOk = newAllowed.includes(form.type);
+                      setForm({ ...form, immeuble_id: v ?? "", type: typeOk ? form.type : newAllowed[0] });
+                    }}
                     items={immeubles.map((i) => ({ value: String(i.id), label: i.nom }))}
                   >
                     <SelectTrigger className="w-full">
@@ -249,15 +280,15 @@ export default function LogementsPage() {
                   <Label>Type *</Label>
                   <Select
                     value={form.type}
-                    onValueChange={(v) => setForm({ ...form, type: v as TypeLogement })}
-                    items={Object.entries(typeLabels).map(([value, label]) => ({ value, label }))}
+                    onValueChange={(v) => setForm({ ...form, type: v as TypeLogement, nb_chambres: "", nb_salles_de_bain: "" })}
+                    items={allowedTypes.map((v) => ({ value: v, label: typeLabels[v] }))}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(typeLabels).map(([value, label]) => (
-                        <SelectItem key={value} value={value}>{label}</SelectItem>
+                      {allowedTypes.map((v) => (
+                        <SelectItem key={v} value={v}>{typeLabels[v]}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -274,19 +305,30 @@ export default function LogementsPage() {
                   <Label htmlFor="etage">Étage</Label>
                   <Input id="etage" type="number" min={0} value={form.etage} onChange={(e) => setForm({ ...form, etage: e.target.value })} placeholder="2" />
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="chambres">Chambres</Label>
-                  <Input id="chambres" type="number" min={0} value={form.nb_chambres} onChange={(e) => setForm({ ...form, nb_chambres: e.target.value })} placeholder="2" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="sdb">Salles de bain</Label>
-                  <Input id="sdb" type="number" min={0} value={form.nb_salles_de_bain} onChange={(e) => setForm({ ...form, nb_salles_de_bain: e.target.value })} placeholder="1" />
-                </div>
+                {isBureau ? (
+                  <div className="space-y-1.5 col-span-2">
+                    <Label htmlFor="nb_pieces">Nombre de pièces</Label>
+                    <Input id="nb_pieces" type="number" min={0} value={form.nb_chambres} onChange={(e) => setForm({ ...form, nb_chambres: e.target.value })} placeholder="4" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="chambres">Chambres</Label>
+                      <Input id="chambres" type="number" min={0} value={form.nb_chambres} onChange={(e) => setForm({ ...form, nb_chambres: e.target.value })} placeholder="2" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="sdb">Salles de bain</Label>
+                      <Input id="sdb" type="number" min={0} value={form.nb_salles_de_bain} onChange={(e) => setForm({ ...form, nb_salles_de_bain: e.target.value })} placeholder="1" />
+                    </div>
+                  </>
+                )}
               </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={form.meuble} onChange={(e) => setForm({ ...form, meuble: e.target.checked })} className="h-4 w-4 rounded accent-primary" />
-                <span className="text-sm">Logement meublé</span>
-              </label>
+              {!isBureau && (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.meuble} onChange={(e) => setForm({ ...form, meuble: e.target.checked })} className="h-4 w-4 rounded accent-primary" />
+                  <span className="text-sm">Logement meublé</span>
+                </label>
+              )}
               <div className="space-y-1.5">
                 <Label htmlFor="desc">Description</Label>
                 <textarea
@@ -401,8 +443,10 @@ export default function LogementsPage() {
                     )}
                     <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
                       {logement.superficie && <span>{logement.superficie} m²</span>}
-                      {logement.nb_chambres && <span>{logement.nb_chambres} ch.</span>}
-                      {logement.nb_salles_de_bain && <span>{logement.nb_salles_de_bain} sdb</span>}
+                      {logement.nb_chambres != null && (
+                        <span>{logement.nb_chambres} {logement.type === "BUREAU" ? "pièces" : "ch."}</span>
+                      )}
+                      {logement.type !== "BUREAU" && logement.nb_salles_de_bain != null && <span>{logement.nb_salles_de_bain} sdb</span>}
                       {logement.etage != null && <span>Ét. {logement.etage}</span>}
                       {logement.meuble && <span className="text-primary">Meublé</span>}
                     </div>
