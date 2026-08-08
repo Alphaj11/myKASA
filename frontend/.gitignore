@@ -39,3 +39,13 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Capacitor — keep android/ source, ignore build outputs
+android/.gradle/
+android/build/
+android/app/build/
+android/.idea/
+android/local.properties
+ios/DerivedData/
+ios/.idea/
+ios/build/

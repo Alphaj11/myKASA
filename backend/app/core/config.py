@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
-    cors_origins: str = "http://localhost:3000"
+    cors_origins: str = "http://localhost:3000,capacitor://localhost,https://localhost,http://localhost"
     frontend_url: str = "http://localhost:3000"
 
     @property
