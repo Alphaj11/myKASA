@@ -47,7 +47,7 @@ const typeLabels: Record<TypeLogement, string> = {
 
 // Which logement types are allowed inside each property type
 const TYPES_COMPATIBLES: Record<string, TypeLogement[]> = {
-  "Immeuble":         ["STUDIO", "APPARTEMENT", "CHAMBRE"],
+  "Immeuble":         ["STUDIO", "APPARTEMENT", "CHAMBRE", "BUREAU"],
   "Résidence":        ["VILLA", "MAISON", "APPARTEMENT", "STUDIO", "CHAMBRE"],
   "Maison":           ["CHAMBRE"],
   "Villa":            ["CHAMBRE"],

@@ -11,7 +11,7 @@ from app.schemas.logement import LogementCreate, LogementRead, LogementUpdate
 from app.services.images import delete_image, save_image
 
 TYPES_COMPATIBLES: dict[str, list[TypeLogement]] = {
-    "Immeuble":         [TypeLogement.STUDIO, TypeLogement.APPARTEMENT, TypeLogement.CHAMBRE],
+    "Immeuble":         [TypeLogement.STUDIO, TypeLogement.APPARTEMENT, TypeLogement.CHAMBRE, TypeLogement.BUREAU],
     "Résidence":        [TypeLogement.VILLA, TypeLogement.MAISON, TypeLogement.APPARTEMENT, TypeLogement.STUDIO, TypeLogement.CHAMBRE],
     "Maison":           [TypeLogement.CHAMBRE],
     "Villa":            [TypeLogement.CHAMBRE],
