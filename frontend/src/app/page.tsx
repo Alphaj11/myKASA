@@ -59,31 +59,41 @@ const features = [
 
 const plans = [
   {
-    name: "Freemium",
+    name: "Gratuit",
     price: "0 FCFA",
-    tagline: "Pour démarrer",
-    features: ["Jusqu'à 2 logements", "Gestion des paiements", "Contrats & quittances"],
+    tagline: "Pour débuter et tester MyKASA",
+    features: [
+      "1 propriété",
+      "2 logements au total",
+      "Contrats & quittances PDF",
+      "Code MyKASA locataire",
+    ],
   },
   {
     name: "Premium",
-    price: "Sur abonnement",
+    price: "3 000 FCFA / mois",
     tagline: "Pour les bailleurs actifs",
     highlighted: true,
     features: [
-      "Logements illimités",
-      "Rappels automatiques",
-      "Statistiques avancées",
-      "Export PDF & sauvegarde cloud",
+      "3 propriétés",
+      "Logements illimités par propriété",
+      "Paiement loyer via CinetPay",
+      "Système de points locataire",
+      "Rappels SMS automatiques",
+      "Export financier PDF",
     ],
   },
   {
     name: "Agence",
-    price: "Sur devis",
-    tagline: "Pour les professionnels",
+    price: "15 000 FCFA / mois",
+    tagline: "Pour les gestionnaires professionnels",
     features: [
-      "Plusieurs propriétaires",
-      "Plusieurs propriétés",
-      "Plusieurs gestionnaires",
+      "Propriétés & logements illimités",
+      "Gestion multi-bailleurs",
+      "Portail propriétaire dédié",
+      "Quittances à votre logo",
+      "Rapport fiscal annuel",
+      "Support prioritaire",
     ],
   },
 ];
@@ -98,11 +108,8 @@ export default function LandingPage() {
     <div className="flex-1 overflow-x-hidden">
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2 font-bold text-lg">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Building2 className="h-5 w-5" />
-            </span>
-            LocalTrack
+          <div className="flex items-center">
+            <img src="/logo.png" alt="MyKASA" className="h-10 w-auto" />
           </div>
           <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
             <a href="#fonctionnalites" className="hover:text-foreground transition-colors">
@@ -140,7 +147,7 @@ export default function LandingPage() {
               </span>
             </h1>
             <p className="mt-5 max-w-lg text-lg text-muted-foreground">
-              Fini les cahiers, les reçus papier et les échanges WhatsApp. LocalTrack centralise
+              Fini les cahiers, les reçus papier et les échanges WhatsApp. MyKASA centralise
               vos propriétés, contrats, paiements et quittances dans un espace numérique sécurisé.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
@@ -234,7 +241,7 @@ export default function LandingPage() {
         >
           <h2 className="text-3xl font-bold">Un dossier numérique pour chaque bien et chaque locataire</h2>
           <p className="mt-3 text-muted-foreground">
-            LocalTrack ne gère pas que des logements : elle crée une mémoire numérique durable pour
+            MyKASA ne gère pas que des logements : elle crée une mémoire numérique durable pour
             vos biens et vos locataires.
           </p>
         </motion.div>
@@ -318,7 +325,7 @@ export default function LandingPage() {
 
       <footer className="border-t border-border/60 py-10">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 text-sm text-muted-foreground md:flex-row">
-          <p>© {new Date().getFullYear()} LocalTrack. L&apos;infrastructure numérique de la location en Afrique.</p>
+          <p>© {new Date().getFullYear()} MyKASA. L&apos;infrastructure numérique de la location en Afrique.</p>
           <div className="flex gap-6">
             <Link href="/login" className="hover:text-foreground">
               Connexion

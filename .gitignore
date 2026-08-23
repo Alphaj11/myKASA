@@ -1,0 +1,44 @@
+# ── Python ──
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+
+# ── Base de données locale ──
+backend/mykasa.db
+backend/*.db
+
+# ── Variables d'environnement (secrets) ──
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# ── Next.js ──
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+
+# ── Android build artifacts ──
+frontend/android/build/
+frontend/android/app/build/
+frontend/android/capacitor-cordova-android-plugins/build/
+frontend/android/.gradle/
+frontend/android/local.properties
+
+# ── IDE ──
+.idea/
+*.iml
+.vscode/
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+
+# ── Logs ──
+*.log
+npm-debug.log*

@@ -8,7 +8,7 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
-    const token = window.localStorage.getItem("localtrack_token");
+    const token = window.localStorage.getItem("mykasa_token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -23,20 +23,20 @@ interface RetriableConfig extends InternalAxiosRequestConfig {
 let refreshPromise: Promise<string | null> | null = null;
 
 function clearSessionAndRedirect() {
-  window.localStorage.removeItem("localtrack_token");
-  window.localStorage.removeItem("localtrack_refresh_token");
+  window.localStorage.removeItem("mykasa_token");
+  window.localStorage.removeItem("mykasa_refresh_token");
   if (!window.location.pathname.startsWith("/login")) {
     window.location.href = "/login";
   }
 }
 
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = window.localStorage.getItem("localtrack_refresh_token");
+  const refreshToken = window.localStorage.getItem("mykasa_refresh_token");
   if (!refreshToken) return null;
   try {
     const res = await axios.post(`${API_URL}/api/auth/refresh`, { refresh_token: refreshToken });
     const newAccessToken: string = res.data.access_token;
-    window.localStorage.setItem("localtrack_token", newAccessToken);
+    window.localStorage.setItem("mykasa_token", newAccessToken);
     return newAccessToken;
   } catch {
     return null;
@@ -57,6 +57,13 @@ const NO_RETRY_PATHS = [
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+    // Plan limit — signal global upgrade modal
+    if (error.response?.status === 402 && typeof window !== "undefined") {
+      const detail = (error.response.data as { detail?: string })?.detail;
+      window.dispatchEvent(new CustomEvent("plan-limit", { detail: detail ?? "" }));
+      return Promise.reject(error);
+    }
+
     const config = error.config as RetriableConfig | undefined;
     const isNoRetryEndpoint = NO_RETRY_PATHS.some((path) => config?.url?.includes(path));
 

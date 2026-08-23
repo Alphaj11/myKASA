@@ -25,6 +25,7 @@ class UserRead(UserBase):
     is_active: bool
     is_email_verified: bool
     created_at: datetime
+    code_locataire: str | None = None
     avatar_url: str | None = None
     date_naissance: date | None = None
     adresse: str | None = None

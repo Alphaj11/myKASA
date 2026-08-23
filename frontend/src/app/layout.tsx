@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { UpgradeModal } from "@/components/upgrade-modal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -16,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LocalTrack — Gestion locative simplifiée",
+  title: "MyKASA — Gestion locative simplifiée",
   description:
     "La plateforme numérique de référence pour la gestion locative en Afrique : contrats, paiements et quittances centralisés.",
 };
@@ -33,10 +34,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <AuthProvider>
             {children}
             <Toaster richColors position="top-right" />
+            <UpgradeModal />
           </AuthProvider>
         </ThemeProvider>
       </body>

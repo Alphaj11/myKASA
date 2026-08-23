@@ -1,14 +1,19 @@
-from fastapi import APIRouter, Depends
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.security import require_roles
 from app.db.session import get_db
-from app.models.contrat import Contrat
+from app.models.contrat import Contrat, StatutContrat
 from app.models.locataire import Locataire
-from app.models.paiement import Paiement
+from app.models.paiement import Paiement, ModePaiement
 from app.models.quittance import Quittance
 from app.models.user import User, UserRole
-from app.schemas.portal import MaFicheLocataire, MaQuittance, MonContrat, MonPaiement
+from app.schemas.portal import (
+    MaFicheLocataire, MaQuittance, MonContrat, MonPaiement,
+    PayerLoyerPayload, PayerLoyerResult,
+)
 from app.services.stats import est_en_retard
 
 router = APIRouter(prefix="/api/me", tags=["locataire-portal"])
@@ -74,6 +79,8 @@ def mes_contrats(
                 signature_locataire_url=contrat.signature_locataire_url,
                 created_at=contrat.created_at,
                 en_retard=est_en_retard(db, contrat),
+                points_cumules=contrat.points_cumules,
+                points_disponibles=contrat.points_disponibles,
             )
         )
     return result
@@ -145,3 +152,85 @@ def mes_quittances(
         )
         for q in quittances
     ]
+
+
+@router.post("/payer", response_model=PayerLoyerResult)
+def payer_loyer(
+    payload: PayerLoyerPayload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.LOCATAIRE)),
+):
+    # Vérifie que le contrat appartient à ce locataire
+    locataire_ids = [l.id for l in _mes_locataires(db, current_user)]
+    contrat = db.get(Contrat, payload.contrat_id)
+    if not contrat or contrat.locataire_id not in locataire_ids:
+        raise HTTPException(404, "Contrat introuvable")
+    if contrat.statut != StatutContrat.ACTIF:
+        raise HTTPException(400, "Ce contrat n'est pas actif")
+
+    # Vérifie qu'il n'y a pas déjà un paiement pour cette période
+    existing = db.query(Paiement).filter(
+        Paiement.contrat_id == contrat.id,
+        Paiement.periode == payload.periode,
+    ).first()
+    if existing:
+        raise HTTPException(409, f"Le loyer de {payload.periode} a déjà été payé")
+
+    today = date.today()
+    loyer = float(contrat.loyer_mensuel)
+    points_utilises = 0
+    points_gagnes = 0
+    montant_paye = loyer
+
+    if payload.utiliser_points:
+        if contrat.points_disponibles < 1500:
+            raise HTTPException(400, "Il vous faut au moins 1 500 points pour utiliser vos points")
+        points_utilises = min(contrat.points_disponibles, int(loyer))
+        montant_paye = max(0.0, loyer - points_utilises)
+        contrat.points_disponibles = 0
+    else:
+        # Points gagnés : 150 si avant le jour de paiement, 100 sinon
+        try:
+            annee, mois = map(int, payload.periode.split("-"))
+            echeance = date(annee, mois, contrat.jour_paiement)
+            points_gagnes = 150 if today <= echeance else 100
+        except (ValueError, OverflowError):
+            points_gagnes = 100
+        contrat.points_cumules += points_gagnes
+        contrat.points_disponibles += points_gagnes
+
+    # Enregistre le paiement
+    paiement = Paiement(
+        contrat_id=contrat.id,
+        montant=montant_paye,
+        periode=payload.periode,
+        date_paiement=today,
+        mode_paiement=ModePaiement.MOBILE_MONEY,
+        commentaire="Paiement via MyKASA" + (" (points utilisés)" if points_utilises else ""),
+    )
+    db.add(paiement)
+    db.flush()
+
+    # Génère la quittance
+    import datetime as dt
+    from app.models.quittance import Quittance
+    numero = f"Q-{contrat.id:04d}-{payload.periode}-{paiement.id:04d}"
+    quittance = Quittance(
+        paiement_id=paiement.id,
+        numero=numero,
+        pdf_path="",
+        genere_le=dt.datetime.utcnow(),
+    )
+    db.add(quittance)
+    db.commit()
+
+    msg_pts = f" +{points_gagnes} pts !" if points_gagnes else f" ({points_utilises} pts utilisés)"
+    return PayerLoyerResult(
+        paiement_id=paiement.id,
+        montant_paye=montant_paye,
+        points_utilises=points_utilises,
+        points_gagnes=points_gagnes,
+        points_disponibles=contrat.points_disponibles,
+        points_cumules=contrat.points_cumules,
+        message=f"Paiement de {payload.periode} enregistré.{msg_pts}",
+    )

@@ -18,6 +18,7 @@ export interface User {
   cni_url: string | null;
   cni_date_delivrance: string | null;
   cni_lieu_delivrance: string | null;
+  code_locataire: string | null;
 }
 
 export interface Immeuble {
@@ -134,6 +135,13 @@ export interface DashboardStats {
   revenus_par_mois: { mois: string; montant: number }[];
 }
 
+export interface PlanUsage {
+  plan: PlanType;
+  plan_label: string;
+  immeubles: { current: number; max: number | null };
+  logements: { current: number; max: number | null };
+}
+
 export interface AdminStats {
   nb_bailleurs: number;
   nb_locataires: number;
@@ -172,6 +180,18 @@ export interface MonContrat {
   signature_locataire_url: string | null;
   created_at: string;
   en_retard: boolean;
+  points_cumules: number;
+  points_disponibles: number;
+}
+
+export interface PayerLoyerResult {
+  paiement_id: number;
+  montant_paye: number;
+  points_utilises: number;
+  points_gagnes: number;
+  points_disponibles: number;
+  points_cumules: number;
+  message: string;
 }
 
 export interface MonPaiement {

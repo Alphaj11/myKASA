@@ -13,7 +13,7 @@ const navItems: NavItem[] = [
 
 export default function LocataireLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppShell navItems={navItems} allowedRoles={["LOCATAIRE"]} brandLabel="LocalTrack">
+    <AppShell navItems={navItems} allowedRoles={["LOCATAIRE"]} brandLabel="MyKASA">
       {children}
     </AppShell>
   );

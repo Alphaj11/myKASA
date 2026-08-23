@@ -9,9 +9,9 @@ from app.core.config import settings
 from app.routers import admin, auth, contrats, dashboard, immeubles, locataires, logements, me, paiements, quittances
 from app.services.pdf import STORAGE_ROOT
 
-logger = logging.getLogger("localtrack.main")
+logger = logging.getLogger("mykasa.main")
 
-app = FastAPI(title="LocalTrack API", version="0.1.0")
+app = FastAPI(title="MyKASA API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,

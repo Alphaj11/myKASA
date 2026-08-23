@@ -1,8 +1,24 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.contrat import StatutContrat
+
+
+class PayerLoyerPayload(BaseModel):
+    contrat_id: int
+    periode: str = Field(..., pattern=r"^\d{4}-\d{2}$")  # YYYY-MM
+    utiliser_points: bool = False
+
+
+class PayerLoyerResult(BaseModel):
+    paiement_id: int
+    montant_paye: float
+    points_utilises: int
+    points_gagnes: int
+    points_disponibles: int
+    points_cumules: int
+    message: str
 
 
 class MaFicheLocataire(BaseModel):
@@ -33,6 +49,8 @@ class MonContrat(BaseModel):
     signature_locataire_url: str | None = None
     created_at: datetime
     en_retard: bool = False
+    points_cumules: int = 0
+    points_disponibles: int = 0
 
 
 class MonPaiement(BaseModel):

@@ -3,6 +3,7 @@
 import {
   LayoutDashboard,
   Building2,
+  Crown,
   Home,
   Users,
   FileText,
@@ -20,12 +21,13 @@ const navItems: NavItem[] = [
   { href: "/dashboard/contrats", label: "Contrats", icon: FileText },
   { href: "/dashboard/paiements", label: "Paiements", icon: Wallet },
   { href: "/dashboard/quittances", label: "Quittances", icon: Receipt },
+  { href: "/dashboard/plan", label: "Plans & Tarifs", icon: Crown },
   { href: "/profil", label: "Profil", icon: UserCircle },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppShell navItems={navItems} allowedRoles={["BAILLEUR"]} brandLabel="LocalTrack">
+    <AppShell navItems={navItems} allowedRoles={["BAILLEUR"]} brandLabel="MyKASA">
       {children}
     </AppShell>
   );

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from app.core.plans import check_immeuble_limit
 from app.core.security import get_current_user, require_roles
 from app.db.session import get_db
 from app.models.contrat import Contrat
@@ -33,6 +34,9 @@ def create_immeuble(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_roles(UserRole.BAILLEUR)),
 ):
+    count = db.query(Immeuble).filter(Immeuble.bailleur_id == current_user.id).count()
+    check_immeuble_limit(current_user, count)
+
     data = payload.model_dump()
     declaration = data.pop("declaration_acceptee", False)
     immeuble = Immeuble(

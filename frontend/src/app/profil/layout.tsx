@@ -3,6 +3,7 @@
 import {
   LayoutDashboard,
   Building2,
+  Crown,
   Home,
   Users,
   FileText,
@@ -21,6 +22,7 @@ const bailleurNavItems: NavItem[] = [
   { href: "/dashboard/contrats", label: "Contrats", icon: FileText },
   { href: "/dashboard/paiements", label: "Paiements", icon: Wallet },
   { href: "/dashboard/quittances", label: "Quittances", icon: Receipt },
+  { href: "/dashboard/plan", label: "Plans & Tarifs", icon: Crown },
   { href: "/profil", label: "Profil", icon: UserCircle },
 ];
 
@@ -43,7 +45,7 @@ export default function ProfilLayout({ children }: { children: React.ReactNode }
 
   const navItems =
     user?.role === "ADMIN" ? adminNavItems : user?.role === "LOCATAIRE" ? locataireNavItems : bailleurNavItems;
-  const brandLabel = user?.role === "ADMIN" ? "LocalTrack Admin" : "LocalTrack";
+  const brandLabel = user?.role === "ADMIN" ? "MyKASA Admin" : "MyKASA";
 
   return (
     <AppShell navItems={navItems} allowedRoles={["ADMIN", "BAILLEUR", "LOCATAIRE"]} brandLabel={brandLabel}>

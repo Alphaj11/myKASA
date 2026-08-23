@@ -11,7 +11,7 @@ const navItems: NavItem[] = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppShell navItems={navItems} allowedRoles={["ADMIN"]} brandLabel="LocalTrack Admin">
+    <AppShell navItems={navItems} allowedRoles={["ADMIN"]} brandLabel="MyKASA Admin">
       {children}
     </AppShell>
   );

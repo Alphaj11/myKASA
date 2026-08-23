@@ -34,6 +34,7 @@ class User(Base):
     is_email_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
+    code_locataire: Mapped[str | None] = mapped_column(String(10), unique=True, nullable=True, index=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     date_naissance: Mapped[date | None] = mapped_column(Date, nullable=True)
     adresse: Mapped[str | None] = mapped_column(String(500), nullable=True)

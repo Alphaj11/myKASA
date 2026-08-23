@@ -33,6 +33,8 @@ class Contrat(Base):
     signature_bailleur_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     signature_locataire_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     pdf_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    points_cumules: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    points_disponibles: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     logement = relationship("Logement", back_populates="contrats")

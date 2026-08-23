@@ -38,15 +38,12 @@ export default function LoginPage() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-sm"
       >
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2 font-bold text-lg">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Building2 className="h-5 w-5" />
-          </span>
-          LocalTrack
+        <Link href="/" className="mb-8 flex items-center justify-center">
+          <img src="/logo.png" alt="MyKASA" className="h-16 w-auto" />
         </Link>
         <Card className="p-6">
           <h1 className="text-xl font-bold">Connexion</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Accédez à votre espace LocalTrack.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Accédez à votre espace MyKASA.</p>
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

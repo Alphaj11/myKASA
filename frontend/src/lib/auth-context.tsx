@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   useEffect(() => {
-    const token = window.localStorage.getItem("localtrack_token");
+    const token = window.localStorage.getItem("mykasa_token");
     if (!token) {
       setIsLoading(false);
       return;
@@ -45,14 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .get<User>("/api/auth/me")
       .then((res) => setUser(res.data))
       .catch(() => {
-        window.localStorage.removeItem("localtrack_token");
+        window.localStorage.removeItem("mykasa_token");
       })
       .finally(() => setIsLoading(false));
   }, []);
 
   function persistSession(token: string, refreshToken: string, userData: User) {
-    window.localStorage.setItem("localtrack_token", token);
-    window.localStorage.setItem("localtrack_refresh_token", refreshToken);
+    window.localStorage.setItem("mykasa_token", token);
+    window.localStorage.setItem("mykasa_refresh_token", refreshToken);
     setUser(userData);
   }
 
@@ -86,8 +86,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function logout() {
-    window.localStorage.removeItem("localtrack_token");
-    window.localStorage.removeItem("localtrack_refresh_token");
+    window.localStorage.removeItem("mykasa_token");
+    window.localStorage.removeItem("mykasa_refresh_token");
     setUser(null);
     router.push("/login");
   }

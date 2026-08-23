@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
+from app.core.plans import check_logement_limit
 from app.core.security import get_current_user, require_roles
 from app.db.session import get_db
 from app.models.contrat import Contrat
@@ -69,6 +70,15 @@ def create_logement(
 ):
     immeuble = _assert_immeuble_owned(db, payload.immeuble_id, current_user)
     _validate_against_immeuble(immeuble, payload.type, payload.superficie)
+
+    total = (
+        db.query(Logement)
+        .join(Immeuble, Logement.immeuble_id == Immeuble.id)
+        .filter(Immeuble.bailleur_id == current_user.id)
+        .count()
+    )
+    check_logement_limit(current_user, total)
+
     logement = Logement(**payload.model_dump())
     db.add(logement)
     db.commit()

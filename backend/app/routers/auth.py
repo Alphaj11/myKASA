@@ -1,10 +1,13 @@
 import logging
+import random
+import string
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.core.plans import get_usage
 from app.core.rate_limit import check_rate_limit, record_failed_attempt, reset_attempts
 from app.core.security import (
     create_access_token,
@@ -17,7 +20,9 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import get_db
+from app.models.immeuble import Immeuble
 from app.models.locataire import Locataire
+from app.models.logement import Logement
 from app.models.user import User, UserRole
 from app.schemas.auth import (
     AccessToken,
@@ -30,9 +35,18 @@ from app.schemas.auth import (
 from app.schemas.user import ChangePasswordRequest, UpdateProfileRequest, UserCreate, UserRead
 from app.services.images import delete_image, save_image
 
-logger = logging.getLogger("localtrack.auth")
+logger = logging.getLogger("mykasa.auth")
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
+_CODE_CHARS = string.ascii_uppercase + string.digits
+
+
+def _generate_code_locataire(db: Session) -> str:
+    while True:
+        code = "".join(random.choices(_CODE_CHARS, k=6))
+        if not db.query(User).filter(User.code_locataire == code).first():
+            return code
 
 
 def _send_verification_email(user: User) -> None:
@@ -58,6 +72,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         phone=payload.phone,
         role=payload.role,
         hashed_password=hash_password(payload.password),
+        code_locataire=_generate_code_locataire(db),
     )
     db.add(user)
     db.commit()
@@ -198,6 +213,18 @@ def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
     user.is_email_verified = True
     db.commit()
     return {"message": "Email vérifié avec succès."}
+
+
+@router.get("/me/plan")
+def my_plan(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    immeuble_count = db.query(Immeuble).filter(Immeuble.bailleur_id == current_user.id).count()
+    logement_count = (
+        db.query(Logement)
+        .join(Immeuble, Logement.immeuble_id == Immeuble.id)
+        .filter(Immeuble.bailleur_id == current_user.id)
+        .count()
+    )
+    return get_usage(current_user, immeuble_count, logement_count)
 
 
 @router.post("/resend-verification")

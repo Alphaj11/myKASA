@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.locatrack.app",
-  appName: "LocaTrack",
+  appId: "com.mykasa.app",
+  appName: "MyKASA",
   webDir: "out",
   server: {
     // In development with live-reload, point to the Next.js dev server.

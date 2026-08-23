@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, Loader2, ShieldCheck, User } from "lucide-react";
+import { Camera, Check, Copy, Crown, Loader2, Moon, ShieldCheck, Sun, SunMoon, User } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -9,11 +10,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useTheme } from "next-themes";
 import { api, apiErrorMessage, imgUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import type { PlanUsage } from "@/types";
 
 export default function ProfilPage() {
   const { user, refreshUser } = useAuth();
+  const { theme, setTheme } = useTheme();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
@@ -30,6 +34,8 @@ export default function ProfilPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSavingPassword, setIsSavingPassword] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
+  const [planUsage, setPlanUsage] = useState<PlanUsage | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -40,6 +46,9 @@ export default function ProfilPage() {
       setCniNumero(user.cni_numero ?? "");
       setCniDateDelivrance(user.cni_date_delivrance ?? "");
       setCniLieuDelivrance(user.cni_lieu_delivrance ?? "");
+      if (user.role === "BAILLEUR" || user.role === "GESTIONNAIRE") {
+        api.get<PlanUsage>("/api/auth/me/plan").then((r) => setPlanUsage(r.data)).catch(() => {});
+      }
     }
   }, [user]);
 
@@ -108,6 +117,13 @@ export default function ProfilPage() {
     }
   }
 
+  function copyCode() {
+    if (!user?.code_locataire) return;
+    navigator.clipboard.writeText(user.code_locataire);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  }
+
   if (!user) return null;
 
   const hasIdentity = user.full_name && (user.date_naissance || user.cni_numero || user.adresse);
@@ -120,13 +136,89 @@ export default function ProfilPage() {
         <p className="text-sm text-muted-foreground">Vos informations personnelles et votre sécurité.</p>
       </div>
 
+      {/* Code MyKASA — visible pour tous, indispensable pour le locataire */}
+      {user.code_locataire && (
+        <Card className="p-5 border-primary/30 bg-primary/5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-primary mb-1">
+                Votre code MyKASA
+              </p>
+              <p className="text-3xl font-mono font-bold tracking-widest">{user.code_locataire}</p>
+              {user.role === "LOCATAIRE" && (
+                <p className="mt-1.5 text-xs text-muted-foreground max-w-xs">
+                  Transmettez ce code à votre propriétaire pour qu&apos;il puisse vous ajouter à un logement sans ressaisir vos informations.
+                </p>
+              )}
+            </div>
+            <button
+              onClick={copyCode}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium hover:bg-accent transition-colors shrink-0"
+            >
+              {codeCopied ? (
+                <><Check className="h-3.5 w-3.5 text-accent-foreground" /> Copié</>
+              ) : (
+                <><Copy className="h-3.5 w-3.5" /> Copier</>
+              )}
+            </button>
+          </div>
+        </Card>
+      )}
+
+      {/* Usage du plan — bailleurs et gestionnaires */}
+      {planUsage && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Crown className="h-4 w-4 text-primary" />
+              <span className="font-semibold">
+                Plan <span className="text-primary">{planUsage.plan_label}</span>
+              </span>
+            </div>
+            <Link
+              href="/dashboard/plan"
+              className="inline-flex items-center justify-center rounded-md border border-border bg-card px-3 py-1.5 text-sm font-medium hover:bg-accent transition-colors"
+            >
+              Voir les plans
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {[
+              { label: "Propriétés", data: planUsage.immeubles },
+              { label: "Logements", data: planUsage.logements },
+            ].map(({ label, data }) => {
+              const atLimit = data.max !== null && data.current >= data.max;
+              const pct = data.max === null ? 0 : Math.min((data.current / data.max) * 100, 100);
+              return (
+                <div key={label} className="space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">{label}</span>
+                    <span className={atLimit ? "text-destructive font-semibold" : ""}>
+                      {data.current} / {data.max === null ? "∞" : data.max}
+                    </span>
+                  </div>
+                  {data.max !== null && (
+                    <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${atLimit ? "bg-destructive" : "bg-primary"}`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       {/* Carte d'identité */}
       {hasIdentity && (
         <Card className="overflow-hidden p-0">
           <div className="bg-gradient-to-r from-primary to-primary/70 p-4">
             <div className="flex items-center gap-2 text-primary-foreground">
               <ShieldCheck className="h-4 w-4" />
-              <span className="text-xs font-semibold uppercase tracking-wide">Carte de membre LocalTrack</span>
+              <span className="text-xs font-semibold uppercase tracking-wide">Carte de membre MyKASA</span>
             </div>
           </div>
           <div className="p-4">
@@ -259,6 +351,31 @@ export default function ProfilPage() {
             Enregistrer
           </Button>
         </form>
+      </Card>
+
+      {/* Thème */}
+      <Card className="p-5">
+        <h2 className="font-semibold mb-4">Apparence</h2>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { value: "light", label: "Clair", icon: Sun },
+            { value: "dark", label: "Sombre", icon: Moon },
+            { value: "system", label: "Système", icon: SunMoon },
+          ].map(({ value, label, icon: Icon }) => (
+            <button
+              key={value}
+              onClick={() => setTheme(value)}
+              className={`flex flex-col items-center gap-2 rounded-xl border p-4 text-sm font-medium transition-colors ${
+                theme === value
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-5 w-5" />
+              {label}
+            </button>
+          ))}
+        </div>
       </Card>
 
       {/* Changement mot de passe */}

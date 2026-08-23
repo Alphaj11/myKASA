@@ -4,12 +4,12 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
-    database_url: str = "sqlite:///./localtrack.db"
+    database_url: str = "sqlite:///./mykasa.db"
     secret_key: str = "change-me-to-a-random-secret-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 30
-    cors_origins: str = "http://localhost:3000,capacitor://localhost,https://localhost,http://localhost"
+    cors_origins: str = "http://localhost:3000,capacitor://localhost,https://localhost,http://localhost,http://10.188.85.16:3000"
     frontend_url: str = "http://localhost:3000"
 
     @property

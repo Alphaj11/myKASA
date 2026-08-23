@@ -69,11 +69,8 @@ export default function VerifyEmailPage() {
         transition={{ duration: 0.4 }}
         className="w-full max-w-sm"
       >
-        <Link href="/" className="mb-8 flex items-center justify-center gap-2 font-bold text-lg">
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Building2 className="h-5 w-5" />
-          </span>
-          LocalTrack
+        <Link href="/" className="mb-8 flex items-center justify-center">
+          <img src="/logo.png" alt="MyKASA" className="h-16 w-auto" />
         </Link>
         <Suspense fallback={<Card className="p-6"><Loader2 className="mx-auto h-6 w-6 animate-spin" /></Card>}>
           <VerifyEmailContent />
