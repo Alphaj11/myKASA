@@ -5,7 +5,7 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-_db_url = settings.database_url
+_db_url = settings.database_url.replace("postgres://", "postgresql://", 1)
 if _db_url.startswith("sqlite:///./"):
     _rel = _db_url[len("sqlite:///./"):]
     _backend_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
