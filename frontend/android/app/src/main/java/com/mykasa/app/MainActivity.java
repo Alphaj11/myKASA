@@ -1,4 +1,4 @@
-package com.locatrack.app;
+package com.mykasa.app;
 
 import com.getcapacitor.BridgeActivity;
 
