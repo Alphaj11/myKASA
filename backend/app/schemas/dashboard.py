@@ -3,12 +3,18 @@ from pydantic import BaseModel
 
 class DashboardStats(BaseModel):
     loyers_encaisses_mois: float
-    loyers_en_retard_montant: float
+    montant_en_attente: float
+    taux_impayes: float
     contrats_en_retard: int
+    taux_occupation: float
     logements_occupes: int
     logements_vacants: int
+    revenu_previsionnel: float
     nb_locataires: int
     revenus_par_mois: list[dict]
+    revenus_par_logement: list[dict]
+    # legacy
+    loyers_en_retard_montant: float
 
 
 class AdminStats(BaseModel):

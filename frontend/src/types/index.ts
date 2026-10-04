@@ -129,12 +129,17 @@ export interface Quittance {
 
 export interface DashboardStats {
   loyers_encaisses_mois: number;
-  loyers_en_retard_montant: number;
+  montant_en_attente: number;
+  taux_impayes: number;
   contrats_en_retard: number;
+  taux_occupation: number;
   logements_occupes: number;
   logements_vacants: number;
+  revenu_previsionnel: number;
   nb_locataires: number;
-  revenus_par_mois: { mois: string; montant: number }[];
+  revenus_par_mois: { mois: string; periode: string; montant: number }[];
+  revenus_par_logement: { logement: string; montant: number }[];
+  loyers_en_retard_montant: number;
 }
 
 export interface PlanUsage {
