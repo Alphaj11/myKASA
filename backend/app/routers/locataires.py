@@ -1,4 +1,6 @@
 import os
+import random
+import string
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -21,6 +23,15 @@ from app.services.documents import STORAGE_ROOT, save_locataire_document
 from app.services.images import delete_image, save_image
 
 router = APIRouter(prefix="/api/locataires", tags=["locataires"])
+
+_INV_CHARS = string.ascii_uppercase + string.digits
+
+
+def _generate_code_invitation(db: Session) -> str:
+    while True:
+        code = "INV-" + "".join(random.choices(_INV_CHARS, k=6))
+        if not db.query(Locataire).filter(Locataire.code_invitation == code).first():
+            return code
 
 
 @router.get("/recherche/{code}", response_model=UtilisateurPublic)
@@ -124,7 +135,11 @@ def create_locataire(
             raise HTTPException(status_code=404, detail="Logement introuvable")
         logement.statut = StatutLogement.OCCUPE
 
-    locataire = Locataire(**payload.model_dump(), bailleur_id=current_user.id)
+    locataire = Locataire(
+        **payload.model_dump(),
+        bailleur_id=current_user.id,
+        code_invitation=_generate_code_invitation(db),
+    )
     db.add(locataire)
     db.commit()
     db.refresh(locataire)

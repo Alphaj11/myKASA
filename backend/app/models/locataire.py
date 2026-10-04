@@ -28,6 +28,7 @@ class Locataire(Base):
     nb_enfants: Mapped[int | None] = mapped_column(nullable=True)
     profession: Mapped[str | None] = mapped_column(String(255), nullable=True)
     employeur: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    code_invitation: Mapped[str | None] = mapped_column(String(20), nullable=True, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     logement = relationship("Logement", back_populates="locataires", foreign_keys=[logement_id])

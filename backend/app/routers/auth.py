@@ -66,11 +66,24 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=400, detail="Un compte existe deja avec cet email")
 
+    # Vérifie le code d'invitation avant de créer le compte
+    profil_invite = None
+    if payload.code_invitation:
+        code = payload.code_invitation.upper().strip()
+        profil_invite = db.query(Locataire).filter(
+            Locataire.code_invitation == code,
+            Locataire.utilisateur_id.is_(None),
+        ).first()
+        if not profil_invite:
+            raise HTTPException(status_code=400, detail="Code d'invitation invalide ou déjà utilisé")
+
+    role = UserRole.LOCATAIRE if profil_invite else payload.role
+
     user = User(
         email=payload.email,
         full_name=payload.full_name,
         phone=payload.phone,
-        role=payload.role,
+        role=role,
         hashed_password=hash_password(payload.password),
         code_locataire=_generate_code_locataire(db),
     )
@@ -79,11 +92,14 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
     db.refresh(user)
 
     if user.role == UserRole.LOCATAIRE:
-        # Un bailleur a pu créer la fiche locataire avant que la personne ne
-        # crée son compte : on relie automatiquement par email.
-        db.query(Locataire).filter(
-            Locataire.email == user.email, Locataire.utilisateur_id.is_(None)
-        ).update({"utilisateur_id": user.id})
+        if profil_invite:
+            # Liaison via code d'invitation
+            profil_invite.utilisateur_id = user.id
+        else:
+            # Liaison automatique par email si le bailleur a déjà créé le profil
+            db.query(Locataire).filter(
+                Locataire.email == user.email, Locataire.utilisateur_id.is_(None)
+            ).update({"utilisateur_id": user.id})
         db.commit()
 
     _send_verification_email(user)

@@ -14,6 +14,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     password: str
     role: UserRole = UserRole.BAILLEUR
+    code_invitation: str | None = None
 
 
 class UserRead(UserBase):

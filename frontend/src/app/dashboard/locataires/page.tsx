@@ -648,6 +648,26 @@ export default function LocatairesPage() {
                     {loc.cni_numero && <span>CNI: {loc.cni_numero}</span>}
                   </div>
                 </div>
+                {!loc.utilisateur_id && loc.code_invitation && (
+                  <div className="mt-3 border-t pt-3">
+                    <p className="text-xs text-muted-foreground mb-1">Pas encore inscrit · code d&apos;invitation :</p>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-sm font-semibold tracking-wider text-primary">
+                        {loc.code_invitation}
+                      </span>
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        onClick={() => {
+                          navigator.clipboard.writeText(loc.code_invitation!);
+                          toast.success("Code copié");
+                        }}
+                      >
+                        Copier
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <div className="mt-3 border-t pt-3">
                   <DocumentButton locataire={loc} onUploaded={load} />
                 </div>

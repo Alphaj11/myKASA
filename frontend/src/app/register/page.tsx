@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Building2, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,13 +25,20 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("BAILLEUR");
+  const [codeInvitation, setCodeInvitation] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await register({ full_name: fullName, email, password, role });
+      await register({
+        full_name: fullName,
+        email,
+        password,
+        role,
+        ...(codeInvitation.trim() && { code_invitation: codeInvitation.trim().toUpperCase() }),
+      });
       toast.success("Compte créé avec succès");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Erreur lors de l'inscription");
@@ -109,6 +116,26 @@ export default function RegisterPage() {
                 </SelectContent>
               </Select>
             </div>
+
+            {role === "LOCATAIRE" && (
+              <div className="space-y-2">
+                <Label htmlFor="code_invitation">
+                  Code d&apos;invitation{" "}
+                  <span className="text-muted-foreground font-normal">(optionnel)</span>
+                </Label>
+                <Input
+                  id="code_invitation"
+                  value={codeInvitation}
+                  onChange={(e) => setCodeInvitation(e.target.value)}
+                  placeholder="INV-XXXXXX"
+                  className="font-mono tracking-wider"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Fourni par votre bailleur pour lier votre compte à votre logement.
+                </p>
+              </div>
+            )}
+
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Créer mon compte

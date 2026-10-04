@@ -50,6 +50,7 @@ class LocataireRead(LocataireBase):
     logement_id: int | None
     utilisateur_id: int | None = None
     photo_url: str | None = None
+    code_invitation: str | None = None
     created_at: datetime
     lieu_naissance: str | None = None
     nationalite: str | None = None

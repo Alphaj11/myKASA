@@ -77,6 +77,8 @@ export interface Locataire {
   nationalite: string | null;
   statut_matrimonial: string | null;
   nb_enfants: number | null;
+  utilisateur_id: number | null;
+  code_invitation: string | null;
   created_at: string;
 }
 
